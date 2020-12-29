@@ -13,7 +13,7 @@ It accepts only two methods, `GET` and `POST`.
 At every `GET` request, it will respond with the same sent body or none if empty or not present in request. It will add some useful headers like timing metrics related headers and who served the request.
 Request `Content-Type` could be `application/json` and `text/plain`, it will respond accordingly.
 
-At every `POST`, it will check that body must include a json string:
+A `POST` at path `/bounce` is accepted. Then it will check that body must include a json string:
 
 ```json
 {"rebound":"true","endpoint":"http://my.other.service"}
