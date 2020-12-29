@@ -8,6 +8,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"os"
 	"time"
 )
 
@@ -79,9 +80,12 @@ func (h *Data) simpleServe(rw http.ResponseWriter, r *http.Request, st *time.Tim
 	} else {
 		rw.Header().Set("Content-Type", "application/json")
 
-		err := h.Delayer()
-		if err != nil {
-			h.l.Println(err)
+		delayEnv := os.Getenv("DELAY_MAX")
+		if len(delayEnv) != 0 && delayEnv != "0" {
+			err := h.Delayer(delayEnv)
+			if err != nil {
+				h.l.Println(err)
+			}
 		}
 
 		js, err := h.shapingJSON(r, st)
@@ -102,14 +106,17 @@ func (h *Data) reboundServe(rw http.ResponseWriter, r *http.Request, st *time.Ti
 
 	body, _ := ioutil.ReadAll(r.Body)
 
-	err := h.Delayer()
-	if err != nil {
-		h.l.Println(err)
+	delayEnv := os.Getenv("DELAY_MAX")
+	if len(delayEnv) != 0 && delayEnv != "0" {
+		err := h.Delayer(delayEnv)
+		if err != nil {
+			h.l.Println(err)
+		}
 	}
 
 	jsonRecived := &JSONPost{}
 
-	err = DecodeJSON(body, jsonRecived, rw)
+	err := DecodeJSON(body, jsonRecived, rw)
 
 	if jsonRecived.Rebound == "true" {
 

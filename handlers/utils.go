@@ -50,12 +50,11 @@ func CollectHeaders(r *http.Request, m map[string]string) map[string]string {
 }
 
 // Delayer ...
-func (h *Data) Delayer() error {
-	delay, err := strconv.Atoi(os.Getenv("DELAY_MAX"))
-	if delay <= 0 {
-		delay = 0
-	}
+func (h *Data) Delayer(delayEnv string) error {
 
+	delay, err := strconv.Atoi(delayEnv)
+
+	h.l.Printf("Delay == %d", delay)
 	rand.Seed(time.Now().UnixNano())
 	n := rand.Intn(delay)
 

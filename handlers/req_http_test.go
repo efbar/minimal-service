@@ -25,7 +25,7 @@ func setupReqHTTPTest(t *testing.T) *Data {
 }
 
 func TestReqHTTPResp(t *testing.T) {
-	os.Setenv("DELAY_MAX", "2")
+	os.Setenv("DELAY_MAX", "0")
 	req := httptest.NewRequest("GET", "/", nil)
 
 	rr := httptest.NewRecorder()
