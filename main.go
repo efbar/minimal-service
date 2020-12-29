@@ -20,13 +20,15 @@ func main() {
 		port = "9090"
 	}
 
-	reqHTTP := handlers.HandlerHTTP(l)
-	reqHealth := handlers.HandlerHealth(l)
+	anyReq := handlers.HandlerAnyHTTP(l)
+	bounceReq := handlers.HandlerBounceHTTP(l)
+	healthReq := handlers.HandlerHealth(l)
 
 	sm := http.NewServeMux()
 
-	sm.Handle("/", reqHTTP)
-	sm.Handle("/health", reqHealth)
+	sm.Handle("/", anyReq)
+	sm.Handle("/bounce", bounceReq)
+	sm.Handle("/health", healthReq)
 
 	// create a new server
 	s := http.Server{

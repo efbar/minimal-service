@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"encoding/json"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -9,10 +8,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
-	"os"
 	"time"
-
-	"github.com/efbar/minimal-service/utils"
 )
 
 // Data ...
@@ -41,14 +37,13 @@ type JSONPost struct {
 	Endpoint string `json:"endpoint"`
 }
 
-// ToJSON ...
-func (j *JSONResponse) ToJSON(w io.Writer) error {
-	e := json.NewEncoder(w)
-	return e.Encode(j)
+// HandlerAnyHTTP ...
+func HandlerAnyHTTP(l *log.Logger) *Data {
+	return &Data{l}
 }
 
-// HandlerHTTP ...
-func HandlerHTTP(l *log.Logger) *Data {
+// HandlerBounceHTTP ...
+func HandlerBounceHTTP(l *log.Logger) *Data {
 	return &Data{l}
 }
 
@@ -59,7 +54,7 @@ func (h *Data) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 
 	if r.Method == http.MethodGet {
 		h.simpleServe(rw, r, &st)
-	} else if r.Method == http.MethodPost {
+	} else if r.Method == http.MethodPost && r.RequestURI == "/bounce" {
 		err := h.reboundServe(rw, r, &st)
 		if err != nil {
 			h.l.Println(err)
@@ -84,15 +79,61 @@ func (h *Data) simpleServe(rw http.ResponseWriter, r *http.Request, st *time.Tim
 	} else {
 		rw.Header().Set("Content-Type", "application/json")
 
+		err := h.Delayer()
+		if err != nil {
+			h.l.Println(err)
+		}
+
 		js, err := h.shapingJSON(r, st)
 
-		js.ToJSON(rw)
-
+		err = js.EncodeJSON(rw)
 		if err != nil {
 			http.Error(rw, "Bad Request", http.StatusBadRequest)
 			return
 		}
 	}
+
+}
+
+// reboundServe ...
+func (h *Data) reboundServe(rw http.ResponseWriter, r *http.Request, st *time.Time) error {
+
+	rw.Header().Set("Content-Type", "application/json")
+
+	body, _ := ioutil.ReadAll(r.Body)
+
+	err := h.Delayer()
+	if err != nil {
+		h.l.Println(err)
+	}
+
+	jsonRecived := &JSONPost{}
+
+	err = DecodeJSON(body, jsonRecived, rw)
+
+	if jsonRecived.Rebound == "true" {
+
+		err := h.rawConnect(jsonRecived.Endpoint)
+		if err != nil {
+			http.Error(rw, err.Error(), http.StatusBadGateway)
+			return err
+		}
+
+		resp, err := http.Get(jsonRecived.Endpoint)
+		if err != nil {
+			http.Error(rw, "Bad Gateway", http.StatusBadGateway)
+			return err
+		}
+		defer r.Body.Close()
+		h.l.Println(resp.Status, jsonRecived.Endpoint)
+
+		js, err := h.shapingJSON(r, st)
+
+		js.EncodeJSON(rw)
+
+	}
+
+	return err
 
 }
 
@@ -145,57 +186,12 @@ func (h *Data) rawConnect(endpoint string) error {
 	return err
 }
 
-// reboundServe ...
-func (h *Data) reboundServe(rw http.ResponseWriter, r *http.Request, st *time.Time) error {
-
-	rw.Header().Set("Content-Type", "application/json")
-
-	body, _ := ioutil.ReadAll(r.Body)
-
-	decodedJSON := JSONPost{}
-
-	err := json.Unmarshal(body, &decodedJSON)
-	if err != nil {
-		http.Error(rw, "Bad Request", http.StatusBadRequest)
-		return err
-	}
-
-	if decodedJSON.Rebound == "true" {
-
-		err := h.rawConnect(decodedJSON.Endpoint)
-		if err != nil {
-			http.Error(rw, err.Error(), http.StatusBadGateway)
-			return err
-		}
-
-		resp, err := http.Get(decodedJSON.Endpoint)
-		if err != nil {
-			http.Error(rw, "Bad Gateway", http.StatusBadGateway)
-			return err
-		}
-		defer r.Body.Close()
-		h.l.Println(resp.Status, decodedJSON.Endpoint)
-
-		js, _ := h.shapingJSON(r, st)
-		js.ToJSON(rw)
-
-	} else {
-		http.Error(rw, "Bad Request", http.StatusBadRequest)
-		return err
-	}
-	return err
-
-}
-
 // shapingJSON ...
 func (h *Data) shapingJSON(r *http.Request, st *time.Time) (*JSONResponse, error) {
 
 	body, _ := ioutil.ReadAll(r.Body)
 
-	host, err := os.Hostname()
-	if err != nil {
-		h.l.Printf("Server hostname unknown: %s\n\n", err.Error())
-	}
+	host, err := h.GetHostname()
 
 	ft := time.Now()
 	delta := ft.UnixNano() - st.UnixNano()
@@ -205,7 +201,7 @@ func (h *Data) shapingJSON(r *http.Request, st *time.Time) (*JSONResponse, error
 		"Response-time": ft.UTC().String(),
 		"Duration":      fmt.Sprint(float64(delta) / float64(time.Millisecond)),
 	}
-	headers := utils.GetHeaders(r, serverTiming)
+	headers := CollectHeaders(r, serverTiming)
 	js := &JSONResponse{
 		Host:       r.Host,
 		StatusCode: http.StatusOK,
@@ -217,17 +213,14 @@ func (h *Data) shapingJSON(r *http.Request, st *time.Time) (*JSONResponse, error
 		Method:     string(r.Method),
 	}
 
-	return js, nil
+	return js, err
 
 }
 
 // shapingPlain ...
 func (h *Data) shapingPlain(rw http.ResponseWriter, r *http.Request, st *time.Time) error {
 
-	host, err := os.Hostname()
-	if err != nil {
-		h.l.Printf("Server hostname unknown: %s\n\n", err.Error())
-	}
+	host, err := h.GetHostname()
 	fmt.Fprintf(rw, "Request served by %s\n\n", host)
 
 	fmt.Fprintf(rw, "%s %s %s\n", r.Method, r.URL, r.Proto)
@@ -240,7 +233,7 @@ func (h *Data) shapingPlain(rw http.ResponseWriter, r *http.Request, st *time.Ti
 		"ResponseTime": ft.UTC().String(),
 		"Duration":     fmt.Sprint(float64(delta) / float64(time.Millisecond)),
 	}
-	headers := utils.GetHeaders(r, serverTiming)
+	headers := CollectHeaders(r, serverTiming)
 	for key, value := range headers {
 		fmt.Fprintf(rw, "%s: %s\n", key, value)
 	}
