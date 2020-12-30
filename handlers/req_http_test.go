@@ -10,6 +10,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/efbar/minimal-service/helpers"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -21,15 +22,20 @@ func setupReqHTTPTest(t *testing.T) *Data {
 		log.New(logHandleReq,
 			"Test Logger: ",
 			log.Ldate|log.Ltime|log.Lshortfile),
+		helpers.ListEnvs,
 	}
 }
 
 func TestReqHTTPResp(t *testing.T) {
-	os.Setenv("DELAY_MAX", "0")
+
 	req := httptest.NewRequest("GET", "/", nil)
 
 	rr := httptest.NewRecorder()
 	handler := setupReqHTTPTest(t)
+	helpers.ListEnvs = map[string]string{
+		"DELAY_MAX": "1",
+		"TRACING":   "1",
+	}
 
 	handler.ServeHTTP(rr, req)
 

@@ -8,13 +8,17 @@ import (
 	"net"
 	"net/http"
 	"net/url"
-	"os"
 	"time"
+
+	"github.com/efbar/minimal-service/helpers"
+	tracer "github.com/efbar/minimal-service/tracer"
+	"go.opentelemetry.io/otel/label"
 )
 
 // Data ...
 type Data struct {
-	l *log.Logger
+	l    *log.Logger
+	envs map[string]string
 }
 
 // JSONResponses ...
@@ -39,13 +43,13 @@ type JSONPost struct {
 }
 
 // HandlerAnyHTTP ...
-func HandlerAnyHTTP(l *log.Logger) *Data {
-	return &Data{l}
+func HandlerAnyHTTP(l *log.Logger, envs map[string]string) *Data {
+	return &Data{l, envs}
 }
 
 // HandlerBounceHTTP ...
-func HandlerBounceHTTP(l *log.Logger) *Data {
-	return &Data{l}
+func HandlerBounceHTTP(l *log.Logger, envs map[string]string) *Data {
+	return &Data{l, envs}
 }
 
 // ServeHTTP ...
@@ -80,7 +84,7 @@ func (h *Data) simpleServe(rw http.ResponseWriter, r *http.Request, st *time.Tim
 	} else {
 		rw.Header().Set("Content-Type", "application/json")
 
-		delayEnv := os.Getenv("DELAY_MAX")
+		delayEnv := h.envs["DELAY_MAX"]
 		if len(delayEnv) != 0 && delayEnv != "0" {
 			err := h.Delayer(delayEnv)
 			if err != nil {
@@ -91,6 +95,13 @@ func (h *Data) simpleServe(rw http.ResponseWriter, r *http.Request, st *time.Tim
 		js, err := h.shapingJSON(r, st)
 
 		err = js.EncodeJSON(rw)
+
+		enableTracing := h.envs["TRACING"]
+		jaegerURL := h.envs["JAEGER_URL"]
+		if enableTracing == "1" {
+			h.execTracing(jaegerURL, "minimal-service")
+		}
+
 		if err != nil {
 			http.Error(rw, "Bad Request", http.StatusBadRequest)
 			return
@@ -106,7 +117,7 @@ func (h *Data) reboundServe(rw http.ResponseWriter, r *http.Request, st *time.Ti
 
 	body, _ := ioutil.ReadAll(r.Body)
 
-	delayEnv := os.Getenv("DELAY_MAX")
+	delayEnv := h.envs["DELAY_MAX"]
 	if len(delayEnv) != 0 && delayEnv != "0" {
 		err := h.Delayer(delayEnv)
 		if err != nil {
@@ -137,6 +148,12 @@ func (h *Data) reboundServe(rw http.ResponseWriter, r *http.Request, st *time.Ti
 		js, err := h.shapingJSON(r, st)
 
 		js.EncodeJSON(rw)
+
+		enableTracing := h.envs["TRACING"]
+		jaegerURL := h.envs["JAEGER_URL"]
+		if enableTracing == "1" {
+			h.execTracing(jaegerURL, "minimal-service")
+		}
 
 	}
 
@@ -198,7 +215,7 @@ func (h *Data) shapingJSON(r *http.Request, st *time.Time) (*JSONResponse, error
 
 	body, _ := ioutil.ReadAll(r.Body)
 
-	host, err := h.GetHostname()
+	host, err := helpers.GetHostname()
 
 	ft := time.Now()
 	delta := ft.UnixNano() - st.UnixNano()
@@ -227,7 +244,7 @@ func (h *Data) shapingJSON(r *http.Request, st *time.Time) (*JSONResponse, error
 // shapingPlain ...
 func (h *Data) shapingPlain(rw http.ResponseWriter, r *http.Request, st *time.Time) error {
 
-	host, err := h.GetHostname()
+	host, err := helpers.GetHostname()
 	fmt.Fprintf(rw, "Request served by %s\n\n", host)
 
 	fmt.Fprintf(rw, "%s %s %s\n", r.Method, r.URL, r.Proto)
@@ -249,4 +266,14 @@ func (h *Data) shapingPlain(rw http.ResponseWriter, r *http.Request, st *time.Ti
 	io.Copy(rw, r.Body)
 
 	return err
+}
+
+func (h *Data) execTracing(url string, service string) {
+	t := &tracer.TraceObject{}
+	tags := &[]label.KeyValue{
+		label.String("exporter", "jaeger"),
+		label.Float64("float", 312.23),
+		label.Int64("int", 123),
+	}
+	t.Opentracer(url, service, *tags)
 }

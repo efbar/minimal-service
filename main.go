@@ -9,19 +9,22 @@ import (
 	"time"
 
 	"github.com/efbar/minimal-service/handlers"
+	"github.com/efbar/minimal-service/helpers"
 )
 
 func main() {
 
 	l := log.New(os.Stdout, "Logger: ", log.LstdFlags)
+	envs := helpers.ListEnvs
 
-	port := os.Getenv("SERVICE_PORT")
+	port := envs["SERVICE_PORT"]
 	if port == "" {
 		port = "9090"
 	}
 
-	anyReq := handlers.HandlerAnyHTTP(l)
-	bounceReq := handlers.HandlerBounceHTTP(l)
+	// anyReq := handlers.HandlerAnyHTTP(l, envs)
+	anyReq := handlers.HandlerAnyHTTP(l, envs)
+	bounceReq := handlers.HandlerBounceHTTP(l, envs)
 	healthReq := handlers.HandlerHealth(l)
 
 	sm := http.NewServeMux()
