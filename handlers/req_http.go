@@ -8,6 +8,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"strconv"
 	"time"
 
 	"github.com/efbar/minimal-service/helpers"
@@ -56,6 +57,11 @@ func HandlerBounceHTTP(l *log.Logger, envs map[string]string) *Data {
 func (h *Data) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 	h.l.Printf("%s on %s from %s", r.Method, r.URL, r.RemoteAddr)
 	st := time.Now()
+
+	s, _ := strconv.Atoi(h.envs["DISCARD_QUOTA"])
+	if helpers.RandBool(s) {
+		return
+	}
 
 	if r.Method == http.MethodGet {
 		h.simpleServe(rw, r, &st)

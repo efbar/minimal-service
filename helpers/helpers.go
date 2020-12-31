@@ -2,6 +2,7 @@ package helpers
 
 import (
 	"fmt"
+	"math/rand"
 	"os"
 	"strings"
 )
@@ -19,6 +20,7 @@ func GetHostname() (string, error) {
 	if err != nil {
 		fmt.Printf("Server hostname unknown: %s\n\n", err.Error())
 	}
+
 	return host, err
 }
 
@@ -29,6 +31,7 @@ func ReadEnv() map[string]string {
 		"DELAY_MAX",
 		"TRACING",
 		"JAEGER_URL",
+		"DISCARD_QUOTA",
 	}
 	pair := map[string]string{}
 	for _, elem := range os.Environ() {
@@ -37,6 +40,7 @@ func ReadEnv() map[string]string {
 			pair[keyval[0]] = keyval[1]
 		}
 	}
+
 	return pair
 }
 
@@ -48,4 +52,15 @@ func contains(listS []string, s string) bool {
 	}
 
 	return false
+}
+
+// RandBool ...
+func RandBool(i int) bool {
+	if i > 100 || i < 0 {
+		i = 0
+	}
+	quota := float32(i) / float32(100)
+	// rand.Seed(time.Now().UnixNano())
+	fmt.Println(quota)
+	return rand.Float32() < quota
 }
