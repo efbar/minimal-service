@@ -10,11 +10,17 @@ import (
 
 	"github.com/efbar/minimal-service/handlers"
 	"github.com/efbar/minimal-service/helpers"
+	"github.com/efbar/minimal-service/logging"
 )
 
 func main() {
 
-	l := log.New(os.Stdout, "Logger: ", log.LstdFlags)
+	l := log.New(os.Stdout,
+		"Logger: ",
+		log.Ldate|log.Ltime)
+	logger := &logging.Logger{
+		Logger: l,
+	}
 	envs := helpers.ListEnvs
 
 	port := envs["SERVICE_PORT"]
@@ -23,9 +29,9 @@ func main() {
 	}
 
 	// anyReq := handlers.HandlerAnyHTTP(l, envs)
-	anyReq := handlers.HandlerAnyHTTP(l, envs)
-	bounceReq := handlers.HandlerBounceHTTP(l, envs)
-	healthReq := handlers.HandlerHealth(l)
+	anyReq := handlers.HandlerAnyHTTP(*logger, envs)
+	bounceReq := handlers.HandlerBounceHTTP(*logger, envs)
+	healthReq := handlers.HandlerHealth(*logger)
 
 	sm := http.NewServeMux()
 
@@ -45,11 +51,11 @@ func main() {
 
 	// run it
 	go func() {
-		l.Println("Starting server on port " + port)
+		logger.Info("Starting server on port " + port)
 
 		err := s.ListenAndServe()
 		if err != nil {
-			l.Printf("Error starting server: %s\n", err)
+			logger.Info("Error starting server: %s\n", err.Error())
 			os.Exit(1)
 		}
 	}()
@@ -60,7 +66,7 @@ func main() {
 	signal.Notify(c, os.Kill)
 
 	sig := <-c
-	log.Println("Got signal:", sig)
+	logger.Info("Got signal:", sig.String())
 
 	// wait max 3 seconds before shutdown
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
