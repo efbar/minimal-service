@@ -17,27 +17,28 @@ type TraceObject struct {
 }
 
 // Opentracer ...
-func (tObj *TraceObject) Opentracer(url string, service string, tags []label.KeyValue) {
+func (tObj *TraceObject) Opentracer(url string, service string, tags []label.KeyValue) error {
 	ctx := context.Background()
 
-	flush := tObj.initTracer(url, service, tags)
+	flush, err := tObj.initTracer(url, service, tags)
 	defer flush()
 
 	tr := otel.Tracer(service)
 	ctx, span := tr.Start(ctx, "span")
 	defer span.End()
 
+	return err
 }
 
 // initTracer creates a new trace provider instance and registers it as global trace provider.
-func (tObj *TraceObject) initTracer(jaegerURL string, service string, tags []label.KeyValue) func() {
+func (tObj *TraceObject) initTracer(jaegerURL string, service string, tags []label.KeyValue) (func(), error) {
 
 	if len(jaegerURL) == 0 {
 		jaegerURL = "http://localhost:14268/api/traces"
 	}
-	url, err := url.ParseRequestURI(jaegerURL)
+	_, err := url.ParseRequestURI(jaegerURL)
 	if err != nil {
-		fmt.Println("Parsed:", url)
+		fmt.Println(err)
 	}
 	fmt.Println("JAEGER_URL", jaegerURL)
 
@@ -53,5 +54,5 @@ func (tObj *TraceObject) initTracer(jaegerURL string, service string, tags []lab
 	if err != nil {
 		fmt.Println(err)
 	}
-	return flush
+	return flush, err
 }
