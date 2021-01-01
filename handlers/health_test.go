@@ -25,13 +25,42 @@ func setupHealthTest(t *testing.T) *Health {
 
 func TestHealthResp(t *testing.T) {
 
-	req := httptest.NewRequest("GET", "/health", nil)
+	tt := []struct {
+		name        string
+		method      string
+		contentType string
+		path        string
+		body        string
+		response    string
+		status      int
+		err         error
+	}{
+		{
+			name:     "GET request",
+			method:   "GET",
+			path:     "/health",
+			response: "Status OK",
+			status:   http.StatusOK,
+		},
+		{
+			name:   "POST request",
+			method: "POST",
+			path:   "/health",
+			status: http.StatusMethodNotAllowed,
+		},
+	}
 
-	rr := httptest.NewRecorder()
-	handler := setupHealthTest(t)
+	for _, tr := range tt {
+		req := httptest.NewRequest(tr.method, tr.path, nil)
 
-	handler.ServeHTTP(rr, req)
+		rr := httptest.NewRecorder()
+		handler := setupHealthTest(t)
 
-	assert.Equal(t, http.StatusOK, rr.Code)
-	assert.Equal(t, "Status OK", rr.Body.String())
+		handler.ServeHTTP(rr, req)
+
+		assert.Equal(t, tr.status, rr.Code)
+		if tr.method == "GET" && tr.path == "/health" {
+			assert.Equal(t, tr.response, rr.Body.String())
+		}
+	}
 }
