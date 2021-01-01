@@ -42,9 +42,12 @@ func CollectHeaders(r *http.Request, m map[string]string) map[string]string {
 // Delayer ...
 func (h *Data) Delayer(delayEnv string) error {
 
+	h.l.Info("Delay == %s", delayEnv)
 	delay, err := strconv.Atoi(delayEnv)
+	if err != nil {
+		h.l.Error(err.Error())
+	}
 
-	h.l.Info("Delay == %s", strconv.Itoa(delay))
 	rand.Seed(time.Now().UnixNano())
 	n := rand.Intn(delay)
 

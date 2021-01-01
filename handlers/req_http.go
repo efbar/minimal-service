@@ -65,7 +65,7 @@ func (h *Data) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 		h.simpleServe(rw, r, &st)
 	} else if r.Method == http.MethodPost && r.RequestURI == "/bounce" {
 		if err := h.reboundServe(rw, r, &st); err != nil {
-			h.l.Info(err.Error())
+			h.l.Error(err.Error())
 		}
 	} else {
 		rw.WriteHeader(http.StatusMethodNotAllowed)
@@ -88,7 +88,7 @@ func (h *Data) simpleServe(rw http.ResponseWriter, r *http.Request, st *time.Tim
 		delayEnv := h.envs["DELAY_MAX"]
 		if len(delayEnv) != 0 && delayEnv != "0" {
 			if err := h.Delayer(delayEnv); err != nil {
-				h.l.Info(err.Error())
+				h.l.Error(err.Error())
 			}
 		}
 
@@ -100,7 +100,7 @@ func (h *Data) simpleServe(rw http.ResponseWriter, r *http.Request, st *time.Tim
 
 		js, err := h.shapingJSON(r, st)
 		if err != nil {
-			h.l.Info("error shaping json", err.Error())
+			h.l.Error("error shaping json", err.Error())
 			http.Error(rw, "Internal Server Error", http.StatusInternalServerError)
 			return
 		}
@@ -124,7 +124,7 @@ func (h *Data) reboundServe(rw http.ResponseWriter, r *http.Request, st *time.Ti
 	delayEnv := h.envs["DELAY_MAX"]
 	if len(delayEnv) != 0 && delayEnv != "0" {
 		if err := h.Delayer(delayEnv); err != nil {
-			h.l.Info(err.Error())
+			h.l.Error(err.Error())
 			return err
 		}
 	}
@@ -132,7 +132,7 @@ func (h *Data) reboundServe(rw http.ResponseWriter, r *http.Request, st *time.Ti
 	jsonRecived := &JSONPost{}
 
 	if err := DecodeJSON(body, jsonRecived, rw); err != nil {
-		h.l.Info("error decode json", err.Error())
+		h.l.Error("error decode json", err.Error())
 		return err
 	}
 
@@ -152,7 +152,7 @@ func (h *Data) reboundServe(rw http.ResponseWriter, r *http.Request, st *time.Ti
 
 		js, err := h.shapingJSON(r, st)
 		if err != nil {
-			h.l.Info("error shaping json", err.Error())
+			h.l.Error("error shaping json", err.Error())
 			http.Error(rw, "Internal Server Error", http.StatusInternalServerError)
 			return err
 		}
@@ -180,7 +180,7 @@ func (h *Data) rawConnect(endpoint string) error {
 
 	url, err := url.ParseRequestURI(endpoint)
 	if err != nil {
-		h.l.Info("Wrong url,", err.Error())
+		h.l.Error("Wrong url")
 		return err
 	}
 	h.l.Info("Correct url:", url.String())
@@ -189,38 +189,35 @@ func (h *Data) rawConnect(endpoint string) error {
 	port := url.Port()
 	h.l.Info("Splitted url:", host, port)
 
-	if host != "" {
-		s, err := net.ResolveIPAddr("ip", host)
-		if err != nil {
-			h.l.Info("Resolve Error:", err.Error())
-			return err
-		}
-		h.l.Info("Resolved url:", url.Scheme, s.String())
-
-		if err == nil {
-			if port == "" {
-				if url.Scheme == "http" {
-					port = "80"
-				} else {
-					port = "443"
-				}
-			}
-
-			h.l.Info("Before dial:", host, port)
-			conn, err := net.DialTimeout("tcp", net.JoinHostPort(host, port), timeout)
-			if err != nil {
-				h.l.Info("Connection Error:", err.Error())
-				return err
-			}
-			if conn != nil {
-				h.l.Info("Open:", net.JoinHostPort(host, port))
-				defer conn.Close()
-			}
-
-			return err
-		}
+	// if host != "" {
+	s, err := net.ResolveIPAddr("ip", host)
+	if err != nil {
+		h.l.Info("Resolve Error:", err.Error())
 		return err
 	}
+	h.l.Info("Resolved url:", url.Scheme, s.String())
+
+	if port == "" {
+		if url.Scheme == "http" {
+			port = "80"
+		} else {
+			port = "443"
+		}
+	}
+
+	h.l.Info("Before dial:", host, port)
+	conn, err := net.DialTimeout("tcp", net.JoinHostPort(host, port), timeout)
+	if err != nil {
+		h.l.Info("Connection Error:", err.Error())
+		return err
+	}
+	if conn != nil {
+		h.l.Info("Open:", net.JoinHostPort(host, port))
+		defer conn.Close()
+	}
+
+	// 	return err
+	// }
 
 	return err
 }
