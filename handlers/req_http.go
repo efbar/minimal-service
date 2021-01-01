@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"log"
 	"net"
 	"net/http"
 	"net/url"
@@ -12,18 +11,16 @@ import (
 	"time"
 
 	"github.com/efbar/minimal-service/helpers"
+	"github.com/efbar/minimal-service/logging"
 	tracer "github.com/efbar/minimal-service/tracer"
 	"go.opentelemetry.io/otel/label"
 )
 
 // Data ...
 type Data struct {
-	l    *log.Logger
+	l    logging.Logger
 	envs map[string]string
 }
-
-// JSONResponses ...
-type JSONResponses []*JSONResponse
 
 // JSONResponse ...
 type JSONResponse struct {
@@ -44,36 +41,35 @@ type JSONPost struct {
 }
 
 // HandlerAnyHTTP ...
-func HandlerAnyHTTP(l *log.Logger, envs map[string]string) *Data {
+func HandlerAnyHTTP(l logging.Logger, envs map[string]string) *Data {
 	return &Data{l, envs}
 }
 
 // HandlerBounceHTTP ...
-func HandlerBounceHTTP(l *log.Logger, envs map[string]string) *Data {
+func HandlerBounceHTTP(l logging.Logger, envs map[string]string) *Data {
 	return &Data{l, envs}
 }
 
 // ServeHTTP ...
 func (h *Data) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
-	h.l.Printf("%s on %s from %s", r.Method, r.URL, r.RemoteAddr)
+	h.l.Info(r.Method, r.URL.String(), r.RemoteAddr)
 	st := time.Now()
 
 	s, _ := strconv.Atoi(h.envs["DISCARD_QUOTA"])
-	if helpers.RandBool(s) {
+	if helpers.RandBool(s, &h.l) {
+		h.l.Info("Request discarded")
 		return
 	}
 
 	if r.Method == http.MethodGet {
 		h.simpleServe(rw, r, &st)
 	} else if r.Method == http.MethodPost && r.RequestURI == "/bounce" {
-		err := h.reboundServe(rw, r, &st)
-		if err != nil {
-			h.l.Println(err)
+		if err := h.reboundServe(rw, r, &st); err != nil {
+			h.l.Info(err.Error())
 		}
 	} else {
 		rw.WriteHeader(http.StatusMethodNotAllowed)
 	}
-
 }
 
 // simpleServe ...
@@ -82,8 +78,7 @@ func (h *Data) simpleServe(rw http.ResponseWriter, r *http.Request, st *time.Tim
 	contentType := r.Header.Get("Content-type")
 	if contentType == "text/plain" {
 		rw.Header().Set("Content-Type", "text/plain")
-		err := h.shapingPlain(rw, r, st)
-		if err != nil {
+		if err := h.shapingPlain(rw, r, st); err != nil {
 			http.Error(rw, "Internal Server Error", http.StatusInternalServerError)
 			return
 		}
@@ -92,15 +87,10 @@ func (h *Data) simpleServe(rw http.ResponseWriter, r *http.Request, st *time.Tim
 
 		delayEnv := h.envs["DELAY_MAX"]
 		if len(delayEnv) != 0 && delayEnv != "0" {
-			err := h.Delayer(delayEnv)
-			if err != nil {
-				h.l.Println(err)
+			if err := h.Delayer(delayEnv); err != nil {
+				h.l.Info(err.Error())
 			}
 		}
-
-		js, err := h.shapingJSON(r, st)
-
-		err = js.EncodeJSON(rw)
 
 		enableTracing := h.envs["TRACING"]
 		jaegerURL := h.envs["JAEGER_URL"]
@@ -108,7 +98,14 @@ func (h *Data) simpleServe(rw http.ResponseWriter, r *http.Request, st *time.Tim
 			h.execTracing(jaegerURL, "minimal-service")
 		}
 
+		js, err := h.shapingJSON(r, st)
 		if err != nil {
+			h.l.Info("error shaping json", err.Error())
+			http.Error(rw, "Internal Server Error", http.StatusInternalServerError)
+			return
+		}
+
+		if err = js.EncodeJSON(rw); err != nil {
 			http.Error(rw, "Bad Request", http.StatusBadRequest)
 			return
 		}
@@ -122,24 +119,27 @@ func (h *Data) reboundServe(rw http.ResponseWriter, r *http.Request, st *time.Ti
 	rw.Header().Set("Content-Type", "application/json")
 
 	body, _ := ioutil.ReadAll(r.Body)
+	defer r.Body.Close()
 
 	delayEnv := h.envs["DELAY_MAX"]
 	if len(delayEnv) != 0 && delayEnv != "0" {
-		err := h.Delayer(delayEnv)
-		if err != nil {
-			h.l.Println(err)
+		if err := h.Delayer(delayEnv); err != nil {
+			h.l.Info(err.Error())
+			return err
 		}
 	}
 
 	jsonRecived := &JSONPost{}
 
-	err := DecodeJSON(body, jsonRecived, rw)
+	if err := DecodeJSON(body, jsonRecived, rw); err != nil {
+		h.l.Info("error decode json", err.Error())
+		return err
+	}
 
 	if jsonRecived.Rebound == "true" {
-
-		err := h.rawConnect(jsonRecived.Endpoint)
-		if err != nil {
-			http.Error(rw, err.Error(), http.StatusBadGateway)
+		h.l.Info("jsonRecived.Rebound", jsonRecived.Rebound)
+		if err := h.rawConnect(jsonRecived.Endpoint); err != nil {
+			http.Error(rw, "Bad Request", http.StatusBadGateway)
 			return err
 		}
 
@@ -148,22 +148,30 @@ func (h *Data) reboundServe(rw http.ResponseWriter, r *http.Request, st *time.Ti
 			http.Error(rw, "Bad Gateway", http.StatusBadGateway)
 			return err
 		}
-		defer r.Body.Close()
-		h.l.Println(resp.Status, jsonRecived.Endpoint)
+		h.l.Info(resp.Status, jsonRecived.Endpoint)
 
 		js, err := h.shapingJSON(r, st)
+		if err != nil {
+			h.l.Info("error shaping json", err.Error())
+			http.Error(rw, "Internal Server Error", http.StatusInternalServerError)
+			return err
+		}
 
-		js.EncodeJSON(rw)
+		if err = js.EncodeJSON(rw); err != nil {
+			http.Error(rw, "Bad Request", http.StatusBadRequest)
+			return err
+		}
 
 		enableTracing := h.envs["TRACING"]
 		jaegerURL := h.envs["JAEGER_URL"]
 		if enableTracing == "1" {
-			h.execTracing(jaegerURL, "minimal-service")
+			if err := h.execTracing(jaegerURL, "minimal-service"); err != nil {
+				return err
+			}
 		}
 
 	}
-
-	return err
+	return nil
 
 }
 
@@ -172,21 +180,22 @@ func (h *Data) rawConnect(endpoint string) error {
 
 	url, err := url.ParseRequestURI(endpoint)
 	if err != nil {
+		h.l.Info("Wrong url,", err.Error())
 		return err
 	}
-	h.l.Println("Parsed:", url)
+	h.l.Info("Correct url:", url.String())
 
 	host := url.Hostname()
 	port := url.Port()
-	h.l.Println("Splitted:", host, port)
+	h.l.Info("Splitted url:", host, port)
 
 	if host != "" {
 		s, err := net.ResolveIPAddr("ip", host)
 		if err != nil {
-			fmt.Println("Resolve Error:", err)
+			h.l.Info("Resolve Error:", err.Error())
 			return err
 		}
-		h.l.Println("Resolved:", url.Scheme, s)
+		h.l.Info("Resolved url:", url.Scheme, s.String())
 
 		if err == nil {
 			if port == "" {
@@ -197,14 +206,14 @@ func (h *Data) rawConnect(endpoint string) error {
 				}
 			}
 
-			h.l.Println("Before dial:", host, port)
+			h.l.Info("Before dial:", host, port)
 			conn, err := net.DialTimeout("tcp", net.JoinHostPort(host, port), timeout)
 			if err != nil {
-				h.l.Println("Connection Error:", err)
+				h.l.Info("Connection Error:", err.Error())
 				return err
 			}
 			if conn != nil {
-				h.l.Println("Open:", net.JoinHostPort(host, port))
+				h.l.Info("Open:", net.JoinHostPort(host, port))
 				defer conn.Close()
 			}
 
@@ -274,12 +283,13 @@ func (h *Data) shapingPlain(rw http.ResponseWriter, r *http.Request, st *time.Ti
 	return err
 }
 
-func (h *Data) execTracing(url string, service string) {
+func (h *Data) execTracing(url string, service string) error {
 	t := &tracer.TraceObject{}
 	tags := &[]label.KeyValue{
 		label.String("exporter", "jaeger"),
 		label.Float64("float", 312.23),
 		label.Int64("int", 123),
 	}
-	t.Opentracer(url, service, *tags)
+	err := t.Opentracer(url, service, *tags)
+	return err
 }

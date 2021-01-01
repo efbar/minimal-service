@@ -5,6 +5,9 @@ import (
 	"math/rand"
 	"os"
 	"strings"
+	"time"
+
+	"github.com/efbar/minimal-service/logging"
 )
 
 // ListEnvs ...
@@ -55,12 +58,12 @@ func contains(listS []string, s string) bool {
 }
 
 // RandBool ...
-func RandBool(i int) bool {
+func RandBool(i int, l *logging.Logger) bool {
 	if i > 100 || i < 0 {
 		i = 0
 	}
 	quota := float32(i) / float32(100)
-	// rand.Seed(time.Now().UnixNano())
-	fmt.Println(quota)
+	rand.Seed(time.Now().UnixNano())
+	l.Info("Quota to discard:", fmt.Sprint(quota))
 	return rand.Float32() < quota
 }

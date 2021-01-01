@@ -2,29 +2,31 @@ package handlers
 
 import (
 	"fmt"
-	"log"
 	"net/http"
+
+	"github.com/efbar/minimal-service/logging"
 )
 
 // Health ...
 type Health struct {
-	l *log.Logger
+	log logging.Logger
 }
 
 // HandlerHealth ...
-func HandlerHealth(l *log.Logger) *Health {
+func HandlerHealth(l logging.Logger) *Health {
 	return &Health{
-		l,
+		log: l,
 	}
 }
 
 // ServeHTTP ...
 func (h *Health) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
-	h.l.Printf("%s on %s from %s", r.Method, r.URL, r.RemoteAddr)
+	h.log.Info(r.Method, "on", r.URL.String(), "from", r.RemoteAddr)
 
 	if r.Method == http.MethodGet {
 		rw.WriteHeader(http.StatusOK)
 		fmt.Fprint(rw, "Status OK")
+		h.log.Info("Status OK")
 	} else {
 		rw.WriteHeader(http.StatusMethodNotAllowed)
 	}

@@ -44,13 +44,13 @@ func (h *Data) Delayer(delayEnv string) error {
 
 	delay, err := strconv.Atoi(delayEnv)
 
-	h.l.Printf("Delay == %d", delay)
+	h.l.Info("Delay == %s", strconv.Itoa(delay))
 	rand.Seed(time.Now().UnixNano())
 	n := rand.Intn(delay)
 
-	h.l.Printf("Delay == %d, so sleeping %d seconds...\n", n, n)
+	h.l.Info("Delay == %d, so sleeping %d seconds...\n", strconv.Itoa(n), strconv.Itoa(n))
 	time.Sleep(time.Duration(n) * time.Second)
-	h.l.Println("Done")
+	h.l.Info("Done")
 
 	return err
 }
