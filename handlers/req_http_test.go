@@ -75,6 +75,7 @@ func TestReqHTTPResp(t *testing.T) {
 				"DISCARD_QUOTA": "100",
 				"REJECT":        "1",
 			},
+			response: "Internal Server Error\n",
 		},
 		{
 			name:   "GET request on /test path",
@@ -135,15 +136,14 @@ func TestReqHTTPResp(t *testing.T) {
 			path:     "/bounce",
 			body:     "{\"rebound\":\"true\",\"endpoint\":\"http://www.google.it\"}",
 			status:   http.StatusOK,
-			response: "body\n",
+			response: "Status" + http.StatusText(200),
 		},
 		{
-			name:     "POST request on /bounce path, endpoint with https scheme",
-			method:   "POST",
-			path:     "/bounce",
-			body:     "{\"rebound\":\"true\",\"endpoint\":\"https://www.google.it\"}",
-			status:   http.StatusOK,
-			response: "body\n",
+			name:   "POST request on /bounce path, endpoint with https scheme",
+			method: "POST",
+			path:   "/bounce",
+			body:   "{\"rebound\":\"true\",\"endpoint\":\"https://www.google.it\"}",
+			status: http.StatusOK,
 		},
 		{
 			name:     "POST request on /bounce path, right endpoint in body",
@@ -151,7 +151,7 @@ func TestReqHTTPResp(t *testing.T) {
 			path:     "/bounce",
 			body:     "{\"rebound\":\"true\",\"endpoint\":\"http://www.google.it:80\"}",
 			status:   http.StatusOK,
-			response: "body",
+			response: "200 OK",
 		},
 		{
 			name:     "POST request on /bounce path, unresolveble DNS",
@@ -191,17 +191,17 @@ func TestReqHTTPResp(t *testing.T) {
 
 			assert.Equal(t, tr.status, rr.Result().StatusCode)
 
-			if tr.method == "POST" && tr.path == "/bounce" && tr.body == "{\"rebound\":\"true\",\"endpoint\":\"http://www.google.it:443\"}" {
+			if (tr.method == "GET" && tr.envs["REJECT"] == "1") ||
+				(tr.method == "POST" && tr.path == "/bounce" && tr.body == "{\"rebound\":\"true\",\"endpoint\":\"http://www.google.it:443\"}") {
 				assert.Equal(t, tr.response, rr.Body.String())
 			}
 
 			if tr.method == "POST" && tr.path == "/bounce" && tr.body == "{\"rebound\":\"true\",\"endpoint\":\"http://www.google.it:80\"}" {
-
 				var tmpl = &JSONResponse{}
 				getJBody(rr.Body, tmpl)
-				assert.Equal(t, tr.path, tmpl.RequestURI)
 
-				assert.NotContains(t, rr.Body.String(), tr.response)
+				assert.Equal(t, tr.path, tmpl.RequestURI)
+				assert.Equal(t, tr.response, tmpl.Body)
 			}
 
 			if (tr.method == "GET" && tr.contentType == "text/plain") ||
