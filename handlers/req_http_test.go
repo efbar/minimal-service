@@ -140,16 +140,16 @@ func TestReqHTTPResp(t *testing.T) {
 			path:     "/bounce",
 			body:     "{\"rebound\":\"true\",\"endpoint\":\"http://fakedns\"}",
 			status:   http.StatusBadGateway,
-			response: "no such host",
+			response: "Bad Request\n",
 			err:      nil,
 		},
 		{
 			name:     "POST request on /bounce path, unresolveble DNS",
 			method:   "POST",
 			path:     "/bounce",
-			body:     "{\"rebound\":\"true\",\"endpoint\":\"http://fakedns\"}",
+			body:     "{\"rebound\":\"true\",\"endpoint\":\"http://127.0.0.1:7777\"}",
 			status:   http.StatusBadGateway,
-			response: "connection refused",
+			response: "Bad Request\n",
 			err:      nil,
 		},
 	}
@@ -180,29 +180,29 @@ func TestReqHTTPResp(t *testing.T) {
 
 		if tr.method == "POST" && tr.path != "/bounce" {
 
-			assert.Equal(t, http.StatusMethodNotAllowed, rr.Result().StatusCode)
+			assert.Equal(t, tr.status, rr.Result().StatusCode)
 		}
 
-		if tr.method == "POST" && tr.path != "/bounce" && tr.body == "{\"rebound\":\"true\",\"endpoint\":\"http://www.google.it:443\"}" {
+		if tr.method == "POST" && tr.path == "/bounce" && tr.body == "{\"rebound\":\"true\",\"endpoint\":\"http://www.google.it:443\"}" {
 			assert.Equal(t, tr.status, rr.Result().StatusCode)
 			assert.Equal(t, tr.response, rr.Body.String())
 		}
 
-		if tr.method == "POST" && tr.path != "/bounce" && tr.body == "{\"rebound\":\"true\",\"endpoint\":\"http://www.google.it:80\"}" {
+		if tr.method == "POST" && tr.path == "/bounce" && tr.body == "{\"rebound\":\"true\",\"endpoint\":\"http://www.google.it:80\"}" {
 
 			var tmpl = &JSONResponse{}
 			getJBody(rr.Body, tmpl)
-			assert.Equal(t, tr.method, tmpl.RequestURI)
+			assert.Equal(t, tr.path, tmpl.RequestURI)
 			assert.Equal(t, tr.status, rr.Result().StatusCode)
 			assert.NotContains(t, rr.Body.String(), tr.response)
 		}
 
-		if tr.method == "POST" && tr.path != "/bounce" && tr.body == "{\"rebound\":\"true\",\"endpoint\":\"http://fakedns\"}" {
+		if tr.method == "POST" && tr.path == "/bounce" && tr.body == "{\"rebound\":\"true\",\"endpoint\":\"http://fakedns\"}" {
 			assert.Equal(t, tr.status, rr.Result().StatusCode)
 			assert.Contains(t, rr.Body.String(), tr.response)
 		}
 
-		if tr.method == "POST" && tr.path != "/bounce" && tr.body == "{\"rebound\":\"true\",\"endpoint\":\"http://127.0.0.1:7777\"}" {
+		if tr.method == "POST" && tr.path == "/bounce" && tr.body == "{\"rebound\":\"true\",\"endpoint\":\"http://127.0.0.1:7777\"}" {
 			assert.Equal(t, tr.status, rr.Result().StatusCode)
 			assert.Contains(t, rr.Body.String(), tr.response)
 		}
