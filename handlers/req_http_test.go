@@ -38,12 +38,43 @@ func TestReqHTTPResp(t *testing.T) {
 		body        string
 		response    string
 		status      int
+		envs        map[string]string
 	}{
 		{
 			name:   "GET request on root path",
 			method: "GET",
 			path:   "/",
 			status: http.StatusOK,
+		},
+		{
+			name:   "GET request on root path, delay test",
+			method: "GET",
+			path:   "/",
+			status: http.StatusOK,
+			envs: map[string]string{
+				"DELAY_MAX": "1",
+				"TRACING":   "0",
+			},
+		},
+		{
+			name:   "GET request on root path, tracing test",
+			method: "GET",
+			path:   "/",
+			status: http.StatusOK,
+			envs: map[string]string{
+				"DELAY_MAX": "0",
+				"TRACING":   "1",
+			},
+		},
+		{
+			name:   "GET request on root path, reject test",
+			method: "GET",
+			path:   "/",
+			status: http.StatusInternalServerError,
+			envs: map[string]string{
+				"DISCARD_QUOTA": "100",
+				"REJECT":        "1",
+			},
 		},
 		{
 			name:   "GET request on /test path",
@@ -140,13 +171,16 @@ func TestReqHTTPResp(t *testing.T) {
 		},
 	}
 
-	handler := setupReqHTTPTest(t)
-	helpers.ListEnvs = map[string]string{
-		"DELAY_MAX": "1",
-		"TRACING":   "1",
-	}
-
 	for _, tr := range tt {
+		handler := setupReqHTTPTest(t)
+		if len(tr.envs) == 0 {
+			handler.envs = map[string]string{
+				"DELAY_MAX": "0",
+				"TRACING":   "0",
+			}
+		} else {
+			handler.envs = tr.envs
+		}
 		t.Run(tr.name, func(t *testing.T) {
 			req := httptest.NewRequest(tr.method, tr.path, strings.NewReader(tr.body))
 			if tr.contentType == "text/plain" {
