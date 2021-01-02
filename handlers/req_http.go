@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/efbar/minimal-service/helpers"
@@ -61,6 +62,7 @@ func (h *Data) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 		h.l.Info("Request discarded")
 		if rejected == 1 {
 			http.Error(rw, "Internal Server Error", http.StatusInternalServerError)
+			h.l.Info("Status code 500 sent")
 		}
 		return
 	}
@@ -152,7 +154,11 @@ func (h *Data) reboundServe(rw http.ResponseWriter, r *http.Request, st *time.Ti
 			http.Error(rw, "Bad Gateway", http.StatusBadGateway)
 			return err
 		}
+		defer resp.Body.Close()
 		h.l.Info(resp.Status, jsonRecived.Endpoint)
+
+		r.Header = resp.Header
+		r.Body = ioutil.NopCloser(strings.NewReader(resp.Status))
 
 		js, err := h.shapingJSON(r, st)
 		if err != nil {
