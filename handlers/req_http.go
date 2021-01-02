@@ -55,9 +55,13 @@ func (h *Data) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 	h.l.Info(r.Method, r.URL.String(), r.RemoteAddr)
 	st := time.Now()
 
-	s, _ := strconv.Atoi(h.envs["DISCARD_QUOTA"])
-	if helpers.RandBool(s, &h.l) {
+	discarded, _ := strconv.Atoi(h.envs["DISCARD_QUOTA"])
+	rejected, _ := strconv.Atoi(h.envs["REJECT"])
+	if helpers.RandBool(discarded, &h.l) {
 		h.l.Info("Request discarded")
+		if rejected == 1 {
+			http.Error(rw, "Internal Server Error", http.StatusInternalServerError)
+		}
 		return
 	}
 
@@ -139,7 +143,7 @@ func (h *Data) reboundServe(rw http.ResponseWriter, r *http.Request, st *time.Ti
 	if jsonRecived.Rebound == "true" {
 		h.l.Info("jsonRecived.Rebound", jsonRecived.Rebound)
 		if err := h.rawConnect(jsonRecived.Endpoint); err != nil {
-			http.Error(rw, "Bad Request", http.StatusBadGateway)
+			http.Error(rw, "Bad Gateway", http.StatusBadGateway)
 			return err
 		}
 
@@ -189,7 +193,6 @@ func (h *Data) rawConnect(endpoint string) error {
 	port := url.Port()
 	h.l.Info("Splitted url:", host, port)
 
-	// if host != "" {
 	s, err := net.ResolveIPAddr("ip", host)
 	if err != nil {
 		h.l.Info("Resolve Error:", err.Error())
@@ -215,9 +218,6 @@ func (h *Data) rawConnect(endpoint string) error {
 		h.l.Info("Open:", net.JoinHostPort(host, port))
 		defer conn.Close()
 	}
-
-	// 	return err
-	// }
 
 	return err
 }
