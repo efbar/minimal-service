@@ -38,21 +38,18 @@ func TestReqHTTPResp(t *testing.T) {
 		body        string
 		response    string
 		status      int
-		err         error
 	}{
 		{
 			name:   "GET request on root path",
 			method: "GET",
 			path:   "/",
 			status: http.StatusOK,
-			err:    nil,
 		},
 		{
 			name:   "GET request on /test path",
 			method: "GET",
 			path:   "/test",
 			status: http.StatusOK,
-			err:    nil,
 		},
 		{
 			name:        "GET request on / path, text plain version",
@@ -61,7 +58,6 @@ func TestReqHTTPResp(t *testing.T) {
 			path:        "/",
 			status:      http.StatusOK,
 			response:    "Request served by",
-			err:         nil,
 		},
 		{
 			name:        "POST request on /bounce path, text plain version",
@@ -70,7 +66,6 @@ func TestReqHTTPResp(t *testing.T) {
 			path:        "/",
 			status:      http.StatusOK,
 			response:    "Request served by",
-			err:         nil,
 		},
 		{
 			name:   "POST request on / path",
@@ -78,7 +73,6 @@ func TestReqHTTPResp(t *testing.T) {
 			path:   "/",
 			body:   "",
 			status: http.StatusMethodNotAllowed,
-			err:    nil,
 		},
 		{
 			name:     "POST request on /bounce path, wrong endpoint in body",
@@ -87,25 +81,22 @@ func TestReqHTTPResp(t *testing.T) {
 			body:     "{\"rebound\":\"true\",\"endpoint\":\"http://www.google.it:443\"}",
 			status:   http.StatusBadGateway,
 			response: "Bad Gateway\n",
-			err:      nil,
 		},
 		{
 			name:     "POST request on /bounce path, schemeless endpoint in body",
 			method:   "POST",
 			path:     "/bounce",
 			body:     "{\"rebound\":\"true\",\"endpoint\":\"www.google.it:443\"}",
-			status:   http.StatusBadRequest,
-			response: "Bad Request\n",
-			err:      nil,
+			status:   http.StatusBadGateway,
+			response: "Bad Gateway\n",
 		},
 		{
-			name:     "POST request on /bounce path, schemeless endpoint in body",
+			name:     "POST request on /bounce path, unresolveble in body",
 			method:   "POST",
 			path:     "/bounce",
 			body:     "{\"rebound\":\"true\",\"endpoint\":\"hi/there?\"}",
-			status:   http.StatusBadRequest,
-			response: "Bad Request\n",
-			err:      nil,
+			status:   http.StatusBadGateway,
+			response: "Bad Gateway\n",
 		},
 		{
 			name:     "POST request on /bounce path, endpoint without port",
@@ -114,7 +105,6 @@ func TestReqHTTPResp(t *testing.T) {
 			body:     "{\"rebound\":\"true\",\"endpoint\":\"http://www.google.it\"}",
 			status:   http.StatusOK,
 			response: "body\n",
-			err:      nil,
 		},
 		{
 			name:     "POST request on /bounce path, endpoint with https scheme",
@@ -123,7 +113,6 @@ func TestReqHTTPResp(t *testing.T) {
 			body:     "{\"rebound\":\"true\",\"endpoint\":\"https://www.google.it\"}",
 			status:   http.StatusOK,
 			response: "body\n",
-			err:      nil,
 		},
 		{
 			name:     "POST request on /bounce path, right endpoint in body",
@@ -132,7 +121,6 @@ func TestReqHTTPResp(t *testing.T) {
 			body:     "{\"rebound\":\"true\",\"endpoint\":\"http://www.google.it:80\"}",
 			status:   http.StatusOK,
 			response: "body",
-			err:      nil,
 		},
 		{
 			name:     "POST request on /bounce path, unresolveble DNS",
@@ -140,8 +128,7 @@ func TestReqHTTPResp(t *testing.T) {
 			path:     "/bounce",
 			body:     "{\"rebound\":\"true\",\"endpoint\":\"http://fakedns\"}",
 			status:   http.StatusBadGateway,
-			response: "Bad Request\n",
-			err:      nil,
+			response: "Bad Gateway\n",
 		},
 		{
 			name:     "POST request on /bounce path, unresolveble DNS",
@@ -149,8 +136,7 @@ func TestReqHTTPResp(t *testing.T) {
 			path:     "/bounce",
 			body:     "{\"rebound\":\"true\",\"endpoint\":\"http://127.0.0.1:7777\"}",
 			status:   http.StatusBadGateway,
-			response: "Bad Request\n",
-			err:      nil,
+			response: "Bad Gateway\n",
 		},
 	}
 
@@ -161,51 +147,36 @@ func TestReqHTTPResp(t *testing.T) {
 	}
 
 	for _, tr := range tt {
-
-		req := httptest.NewRequest(tr.method, tr.path, strings.NewReader(tr.body))
-		if tr.contentType == "text/plain" {
-			req.Header.Set("Content-type", "text/plain")
-		}
-		rr := httptest.NewRecorder()
-		handler.ServeHTTP(rr, req)
-
-		if tr.method == "GET" && tr.contentType == "application/json" {
-			assert.Equal(t, tr.status, rr.Result().StatusCode)
-		}
-
-		if tr.method == "GET" && tr.contentType == "text/plain" {
-			assert.Equal(t, tr.status, rr.Result().StatusCode)
-			assert.Contains(t, rr.Body.String(), tr.response)
-		}
-
-		if tr.method == "POST" && tr.path != "/bounce" {
+		t.Run(tr.name, func(t *testing.T) {
+			req := httptest.NewRequest(tr.method, tr.path, strings.NewReader(tr.body))
+			if tr.contentType == "text/plain" {
+				req.Header.Set("Content-type", "text/plain")
+			}
+			rr := httptest.NewRecorder()
+			handler.ServeHTTP(rr, req)
 
 			assert.Equal(t, tr.status, rr.Result().StatusCode)
-		}
 
-		if tr.method == "POST" && tr.path == "/bounce" && tr.body == "{\"rebound\":\"true\",\"endpoint\":\"http://www.google.it:443\"}" {
-			assert.Equal(t, tr.status, rr.Result().StatusCode)
-			assert.Equal(t, tr.response, rr.Body.String())
-		}
+			if tr.method == "POST" && tr.path == "/bounce" && tr.body == "{\"rebound\":\"true\",\"endpoint\":\"http://www.google.it:443\"}" {
+				assert.Equal(t, tr.response, rr.Body.String())
+			}
 
-		if tr.method == "POST" && tr.path == "/bounce" && tr.body == "{\"rebound\":\"true\",\"endpoint\":\"http://www.google.it:80\"}" {
+			if tr.method == "POST" && tr.path == "/bounce" && tr.body == "{\"rebound\":\"true\",\"endpoint\":\"http://www.google.it:80\"}" {
 
-			var tmpl = &JSONResponse{}
-			getJBody(rr.Body, tmpl)
-			assert.Equal(t, tr.path, tmpl.RequestURI)
-			assert.Equal(t, tr.status, rr.Result().StatusCode)
-			assert.NotContains(t, rr.Body.String(), tr.response)
-		}
+				var tmpl = &JSONResponse{}
+				getJBody(rr.Body, tmpl)
+				assert.Equal(t, tr.path, tmpl.RequestURI)
 
-		if tr.method == "POST" && tr.path == "/bounce" && tr.body == "{\"rebound\":\"true\",\"endpoint\":\"http://fakedns\"}" {
-			assert.Equal(t, tr.status, rr.Result().StatusCode)
-			assert.Contains(t, rr.Body.String(), tr.response)
-		}
+				assert.NotContains(t, rr.Body.String(), tr.response)
+			}
 
-		if tr.method == "POST" && tr.path == "/bounce" && tr.body == "{\"rebound\":\"true\",\"endpoint\":\"http://127.0.0.1:7777\"}" {
-			assert.Equal(t, tr.status, rr.Result().StatusCode)
-			assert.Contains(t, rr.Body.String(), tr.response)
-		}
+			if (tr.method == "GET" && tr.contentType == "text/plain") ||
+				(tr.method == "POST" && tr.path == "/bounce" &&
+					(tr.body == "{\"rebound\":\"true\",\"endpoint\":\"http://127.0.0.1:7777\"}" ||
+						tr.body == "{\"rebound\":\"true\",\"endpoint\":\"http://fakedns\"}")) {
+				assert.Contains(t, rr.Body.String(), tr.response)
+			}
+		})
 	}
 }
 
