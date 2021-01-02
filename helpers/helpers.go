@@ -13,6 +13,9 @@ import (
 // ListEnvs ...
 var ListEnvs map[string]string
 
+// EnableDebug ...
+var EnableDebug bool
+
 func init() {
 	ListEnvs = ReadEnv()
 }
@@ -35,6 +38,8 @@ func ReadEnv() map[string]string {
 		"TRACING",
 		"JAEGER_URL",
 		"DISCARD_QUOTA",
+		"REJECT",
+		"DEBUG",
 	}
 	pair := map[string]string{}
 	for _, elem := range os.Environ() {
