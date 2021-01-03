@@ -4,7 +4,7 @@ ifneq (,$(wildcard ./.env))
 endif
 
 PROJECT_NAME=minimal-service
-VERSION=1.0
+VERSION=1.0.0
 GOFILES=$(wildcard *./.go)
 
 ## build
