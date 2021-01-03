@@ -32,13 +32,13 @@ In case of not `200` codes from the endpoint, the headers will be not modified a
 
 This service can be started setting various environment variables, here a list:
 
-`SERVICE_PORT` is the port service is listen from, default is `9090`.
-`DELAY_MAX`, in seconds, just make service responding time to be delayed with a value between 0 and the `DELAY_MAX`, randomly at every request.
-`TRACING`, could be `1` or `0`, it will enable tracing to a Jaeger endpoint through the use of OpenTelemetry dependency.
-`JAEGER_URL` will set custom Jaeger URL. Default is `http://localhost:14268/api/traces`.
-`DISCARD_QUOTA` is a value from 0 to 100. Represents the percentage of discarded requests, it will only return 200 status without any body returned.
-`REJECT` could be `1` and `0`, it will reject the request returning a 500 status.
-`DEBUG` could be `1` and `0`, it will add DEBUG logging.
+* `SERVICE_PORT` is the port service is listen from, default is `9090`.
+* `DELAY_MAX`, in seconds, just make service responding time to be delayed with a value between 0 and the `DELAY_MAX`, randomly at every request.
+* `TRACING`, could be `1` or `0`, it will enable tracing to a Jaeger endpoint through the use of OpenTelemetry dependency.
+* `JAEGER_URL` will set custom Jaeger URL. Default is `http://localhost:14268/api/traces`.
+* `DISCARD_QUOTA` is a value from 0 to 100. Represents the percentage of discarded requests, it will only return 200 status without any body returned.
+* `REJECT` could be `1` and `0`, it will reject the request returning a 500 status.
+* `DEBUG` could be `1` and `0`, it will add DEBUG logging.
 
 ### Health Status API
 
