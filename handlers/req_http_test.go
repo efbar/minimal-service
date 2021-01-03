@@ -78,6 +78,18 @@ func TestReqHTTPResp(t *testing.T) {
 			response: "Internal Server Error\n",
 		},
 		{
+			name:   "GET request on root path, reject test, JSON version",
+			method: "GET",
+			path:   "/",
+			status: http.StatusInternalServerError,
+			envs: map[string]string{
+				"DISCARD_QUOTA": "100",
+				"REJECT":        "1",
+			},
+			contentType: "application/json",
+			response:    "\"Internal Server Error\"\n",
+		},
+		{
 			name:   "GET request on /test path",
 			method: "GET",
 			path:   "/test",
@@ -186,6 +198,9 @@ func TestReqHTTPResp(t *testing.T) {
 			if tr.contentType == "text/plain" {
 				req.Header.Set("Content-type", "text/plain")
 			}
+			if tr.contentType == "application/json" {
+				req.Header.Set("Content-type", "application/json")
+			}
 			rr := httptest.NewRecorder()
 			handler.ServeHTTP(rr, req)
 
@@ -194,6 +209,9 @@ func TestReqHTTPResp(t *testing.T) {
 			if (tr.method == "GET" && tr.envs["REJECT"] == "1") ||
 				(tr.method == "POST" && tr.path == "/bounce" && tr.body == "{\"rebound\":\"true\",\"endpoint\":\"http://www.google.it:443\"}") {
 				assert.Equal(t, tr.response, rr.Body.String())
+				if tr.contentType == "application/json" {
+					assert.Equal(t, tr.contentType, rr.Header().Get("Content-Type"))
+				}
 			}
 
 			if tr.method == "POST" && tr.path == "/bounce" && tr.body == "{\"rebound\":\"true\",\"endpoint\":\"http://www.google.it:80\"}" {
