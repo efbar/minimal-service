@@ -57,3 +57,10 @@ func (h *Data) Delayer(delayEnv string) error {
 
 	return err
 }
+
+// ErrorJSON ...
+func ErrorJSON(rw http.ResponseWriter, err interface{}, code int) {
+	rw.Header().Set("Content-Type", "application/json")
+	rw.WriteHeader(code)
+	json.NewEncoder(rw).Encode(err)
+}
