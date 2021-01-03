@@ -61,7 +61,11 @@ func (h *Data) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 	if helpers.RandBool(discarded, &h.l) {
 		h.l.Info("Request discarded")
 		if rejected == 1 {
-			http.Error(rw, "Internal Server Error", http.StatusInternalServerError)
+			if r.Header.Get("Content-type") == "application/json" {
+				ErrorJSON(rw, "Internal Server Error", http.StatusInternalServerError)
+			} else {
+				http.Error(rw, "Internal Server Error", http.StatusInternalServerError)
+			}
 			h.l.Info("Status code 500 sent")
 		}
 		return
