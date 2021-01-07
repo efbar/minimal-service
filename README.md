@@ -26,19 +26,28 @@ Every other body with any differences (unless the `endpoint` value) will be disc
 If the endpoint value has a valid and alive url and the next `POST` request ends positively, the response will have as Headers the ones received from the endpoint response, plus some others like `Response-time`, `Request-time` and `Duration`. 
 The body will contain the endpoint's response HTTP status (`OK 200`).
 
-In case of not `200` codes from the endpoint, the headers will be not modified and the body will cointain `500 Internal Server Error`.
+In case of not `200` codes from the endpoint, the headers will be not modified and the body will contain `500 Internal Server Error`.
 
 ### Features
 
-This service can be started setting various environment variables, here a list:
+The service has some features and you can set them with environment variables.
 
-* `SERVICE_PORT` is the port service is listen from, default is `9090`.
-* `DELAY_MAX`, in seconds, just make service responding time to be delayed with a value between 0 and the `DELAY_MAX`, randomly at every request.
-* `TRACING`, could be `1` or `0`, it will enable tracing to a Jaeger endpoint through the use of OpenTelemetry dependency.
-* `JAEGER_URL` will set custom Jaeger URL. Default is `http://localhost:14268/api/traces`.
-* `DISCARD_QUOTA` is a value from 0 to 100. Represents the percentage of discarded requests, it will only return 200 status without any body returned.
-* `REJECT` could be `1` and `0`, it will reject the request returning a 500 status.
-* `DEBUG` could be `1` and `0`, it will add DEBUG logging.
+- Choose the port where the service is listening to
+- Set a maximum delay time, so at every request received it will wait for a number of seconds in the range from `0 ` to the chosen value.
+- It will enable tracing to a Jaeger endpoint through the use of OpenTelemetry dependency.
+- Discard request entirely without any feedback or reject them with 500 http status response.
+
+This service can be started setting various environment variables, here the list:
+
+| Env variable | default |value range|
+| ------------------- |:-----:|----|
+|`SERVICE_PORT` | `9090`||
+|`DELAY_MAX`|`0`|
+|`TRACING`|`0`| `0` or `1`| 
+|`JAEGER_URL`| `http://localhost:14268/api/traces`||
+|`DISCARD_QUOTA`|`0`|from `0` to `100`|
+|`REJECT`|`0`| `0` or `1`| 
+|`DEBUG`|`0`| `0` or `1`| 
 
 ### Health Status API
 
