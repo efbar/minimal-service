@@ -33,8 +33,8 @@ In case of not `200` codes from the endpoint, the headers will be not modified a
 The service has some features and you can set them with environment variables.
 
 - Choose the port where the service is listening to
-- Set a maximum delay time, so at every request received it will wait for a number of seconds in the range from `0 ` to the chosen value.
-- It will enable tracing to a Jaeger endpoint through the use of OpenTelemetry dependency.
+- Set a maximum delay time, so at every request received it will wait for a number of seconds in the range from `0` to the chosen value.
+- It will enable tracing to a Jaeger endpoint through the use of OpenTelemetry dependency. It traces status codes and headers.
 - Discard request entirely without any feedback or reject them with 500 http status response.
 
 This service can be started setting various environment variables, here the list:
