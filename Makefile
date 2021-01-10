@@ -21,7 +21,7 @@ install: build
 
 ## test
 test: build
-	@-go test -race -v ./handlers
+	@-go test -race -cover -v ./handlers
 
 ## clean
 clean:
