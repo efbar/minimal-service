@@ -21,12 +21,12 @@ func HandlerHealth(l logging.Logger) *Health {
 
 // ServeHTTP ...
 func (h *Health) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
-	h.log.Info(r.Method, "on", r.URL.String(), "from", r.RemoteAddr)
+	h.log.Debug(r.Method, "on", r.URL.String(), "from", r.RemoteAddr)
 
 	if r.Method == http.MethodGet {
 		rw.WriteHeader(http.StatusOK)
 		fmt.Fprint(rw, "Status OK")
-		h.log.Info("Status OK")
+		h.log.Debug("Status OK")
 	} else {
 		rw.WriteHeader(http.StatusMethodNotAllowed)
 	}

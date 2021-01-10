@@ -66,7 +66,12 @@ func (h *Data) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 			} else {
 				http.Error(rw, "Internal Server Error", http.StatusInternalServerError)
 			}
-			h.l.Info("Status code 500 sent")
+			h.l.Debug(h.envs["DEBUG"], "Status code 500 sent")
+			respHeaders := make(map[string]string)
+			respHeaders["Content-type"] = r.Header.Get("Content-type")
+			respHeaders["User-Agent"] = r.Header.Get("User-Agent")
+			respHeaders["FailCause"] = "request rejected"
+			h.execTracing("minimal-service", http.StatusInternalServerError, http.StatusText(500), respHeaders)
 		}
 		return
 	}
@@ -79,6 +84,9 @@ func (h *Data) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 		}
 	} else {
 		rw.WriteHeader(http.StatusMethodNotAllowed)
+		respHeaders := make(map[string]string)
+		respHeaders["URI"] = r.RequestURI
+		h.execTracing("minimal-service", http.StatusMethodNotAllowed, http.StatusText(405), respHeaders)
 	}
 }
 
@@ -86,6 +94,7 @@ func (h *Data) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 func (h *Data) simpleServe(rw http.ResponseWriter, r *http.Request, st *time.Time) {
 
 	contentType := r.Header.Get("Content-type")
+
 	if contentType == "text/plain" {
 		rw.Header().Set("Content-Type", "text/plain")
 		if err := h.shapingPlain(rw, r, st); err != nil {
@@ -102,12 +111,6 @@ func (h *Data) simpleServe(rw http.ResponseWriter, r *http.Request, st *time.Tim
 			}
 		}
 
-		enableTracing := h.envs["TRACING"]
-		jaegerURL := h.envs["JAEGER_URL"]
-		if enableTracing == "1" {
-			h.execTracing(jaegerURL, "minimal-service")
-		}
-
 		js, err := h.shapingJSON(r, st)
 		if err != nil {
 			h.l.Error("error shaping json", err.Error())
@@ -119,6 +122,9 @@ func (h *Data) simpleServe(rw http.ResponseWriter, r *http.Request, st *time.Tim
 			http.Error(rw, "Bad Request", http.StatusBadRequest)
 			return
 		}
+
+		h.execTracing("minimal-service", http.StatusOK, http.StatusText(200), js.Headers)
+
 	}
 
 }
@@ -147,9 +153,14 @@ func (h *Data) reboundServe(rw http.ResponseWriter, r *http.Request, st *time.Ti
 	}
 
 	if jsonRecived.Rebound == "true" {
-		h.l.Info("jsonRecived.Rebound", jsonRecived.Rebound)
+		h.l.Debug(h.envs["DEBUG"], "jsonRecived.Rebound", jsonRecived.Rebound)
 		if err := h.rawConnect(jsonRecived.Endpoint); err != nil {
 			http.Error(rw, "Bad Gateway", http.StatusBadGateway)
+			respHeaders := make(map[string]string)
+			respHeaders["Content-type"] = r.Header.Get("Content-type")
+			respHeaders["User-Agent"] = r.Header.Get("User-Agent")
+			respHeaders["FailCause"] = "Bad Gateway"
+			h.execTracing("minimal-service", http.StatusBadGateway, http.StatusText(502), respHeaders)
 			return err
 		}
 
@@ -176,13 +187,7 @@ func (h *Data) reboundServe(rw http.ResponseWriter, r *http.Request, st *time.Ti
 			return err
 		}
 
-		enableTracing := h.envs["TRACING"]
-		jaegerURL := h.envs["JAEGER_URL"]
-		if enableTracing == "1" {
-			if err := h.execTracing(jaegerURL, "minimal-service"); err != nil {
-				return err
-			}
-		}
+		h.execTracing("minimal-service", http.StatusOK, http.StatusText(200), js.Headers)
 
 	}
 	return nil
@@ -197,18 +202,18 @@ func (h *Data) rawConnect(endpoint string) error {
 		h.l.Error("Wrong url")
 		return err
 	}
-	h.l.Info("Correct url:", url.String())
+	h.l.Debug(h.envs["DEBUG"], "Correct url:", url.String())
 
 	host := url.Hostname()
 	port := url.Port()
-	h.l.Info("Splitted url:", host, port)
+	h.l.Debug(h.envs["DEBUG"], "Splitted url:", host, port)
 
 	s, err := net.ResolveIPAddr("ip", host)
 	if err != nil {
-		h.l.Info("Resolve Error:", err.Error())
+		h.l.Error("Resolve Error:", err.Error())
 		return err
 	}
-	h.l.Info("Resolved url:", url.Scheme, s.String())
+	h.l.Debug(h.envs["DEBUG"], "Resolved url:", url.Scheme, s.String())
 
 	if port == "" {
 		if url.Scheme == "http" {
@@ -218,14 +223,14 @@ func (h *Data) rawConnect(endpoint string) error {
 		}
 	}
 
-	h.l.Info("Before dial:", host, port)
+	h.l.Debug(h.envs["DEBUG"], "Before dial:", host, port)
 	conn, err := net.DialTimeout("tcp", net.JoinHostPort(host, port), timeout)
 	if err != nil {
-		h.l.Info("Connection Error:", err.Error())
+		h.l.Error("Connection Error:", err.Error())
 		return err
 	}
 	if conn != nil {
-		h.l.Info("Open:", net.JoinHostPort(host, port))
+		h.l.Debug(h.envs["DEBUG"], "Open:", net.JoinHostPort(host, port))
 		defer conn.Close()
 	}
 
@@ -287,16 +292,30 @@ func (h *Data) shapingPlain(rw http.ResponseWriter, r *http.Request, st *time.Ti
 	fmt.Fprintln(rw, "")
 	io.Copy(rw, r.Body)
 
+	h.execTracing("minimal-service", http.StatusOK, http.StatusText(200), headers)
+
 	return err
 }
 
-func (h *Data) execTracing(url string, service string) error {
-	t := &tracer.TraceObject{}
-	tags := &[]label.KeyValue{
-		label.String("exporter", "jaeger"),
-		label.Float64("float", 312.23),
-		label.Int64("int", 123),
+func (h *Data) execTracing(service string, code int, message string, headers map[string]string) {
+	enableTracing := h.envs["TRACING"]
+	if enableTracing == "1" {
+		jaegerURL := h.envs["JAEGER_URL"]
+		host, _ := helpers.GetHostname()
+
+		t := &tracer.TraceObject{}
+		tags := []label.KeyValue{
+			label.String("Exporter", "opentracing-jaeger-plugin"),
+			label.String("Hostname", host),
+		}
+
+		for key, value := range headers {
+			tags = append(tags, label.String(key, value))
+		}
+		err := t.Opentracer(jaegerURL, service, code, message, tags, &h.l, h.envs)
+
+		if err != nil {
+			h.l.Error("TRACING, ", err.Error())
+		}
 	}
-	err := t.Opentracer(url, service, *tags)
-	return err
 }

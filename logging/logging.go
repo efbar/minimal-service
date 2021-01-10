@@ -27,6 +27,8 @@ func (l Logger) Error(params ...string) {
 }
 
 // Debug ...
-func (l Logger) Debug(params ...string) {
-	l.Logger.Printf("%s [DEBUG] %s %s", green, params, reset)
+func (l Logger) Debug(debug string, params ...string) {
+	if debug == "1" {
+		l.Logger.Printf("%s [DEBUG] %s %s", green, params, reset)
+	}
 }
