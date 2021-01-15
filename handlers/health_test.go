@@ -7,6 +7,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/efbar/minimal-service/helpers"
 	"github.com/efbar/minimal-service/logging"
 	"github.com/stretchr/testify/assert"
 )
@@ -20,6 +21,7 @@ func setupHealthTest(t *testing.T) *Health {
 	}
 	return &Health{
 		*logger,
+		helpers.ListEnvs,
 	}
 }
 
