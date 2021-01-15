@@ -40,6 +40,8 @@ func ReadEnv() map[string]string {
 		"DISCARD_QUOTA",
 		"REJECT",
 		"DEBUG",
+		"CONNECT",
+		"CONSUL_SERVER",
 	}
 	pair := map[string]string{}
 	for _, elem := range os.Environ() {
