@@ -49,7 +49,7 @@ This service can be started setting various environment variables, here the list
 |`DISCARD_QUOTA`|`0`|from `0` to `100`|
 |`REJECT`|`0`| `0` or `1`| 
 |`DEBUG`|`0`| `0` or `1`| 
-|`CONNECT`|`false`| `false` or `true`| 
+|`CONNECT`|`0`| `0` or `1`| 
 |`CONSUL_SERVER`|`http://127.0.0.1:8500`| `URI in form scheme://host:port` | 
 
 ### Health Status API
