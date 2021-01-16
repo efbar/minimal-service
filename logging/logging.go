@@ -11,22 +11,22 @@ const (
 	yellow = "\033[33m"
 )
 
-// Logger ...
+// Logger ... simple struct for logging package, prints with color: Info, Error and Debug level
 type Logger struct {
 	Logger *log.Logger
 }
 
-// Info ...
+// Info ... Info level
 func (l Logger) Info(params ...string) {
 	l.Logger.Printf("%s [INFO] %s %s", yellow, params, reset)
 }
 
-// Error ...
+// Error ... Error level
 func (l Logger) Error(params ...string) {
 	l.Logger.Printf("%s [ERROR] %s %s", red, params, reset)
 }
 
-// Debug ...
+// Debug ... Debug level, you have to pass 0 or 1 as first param
 func (l Logger) Debug(debug string, params ...string) {
 	if debug == "1" {
 		l.Logger.Printf("%s [DEBUG] %s %s", green, params, reset)

@@ -19,7 +19,7 @@ import (
 type TraceObject struct {
 }
 
-// Opentracer ...
+// Opentracer ... create tracing provider
 func (tObj *TraceObject) Opentracer(jaegerURL string, service string, code int, message string, tags []label.KeyValue, l *logging.Logger, envs map[string]string) error {
 
 	if len(jaegerURL) == 0 {
@@ -30,6 +30,7 @@ func (tObj *TraceObject) Opentracer(jaegerURL string, service string, code int, 
 		return err
 	}
 
+	// check if you can contact jaeger
 	_, err = net.DialTimeout("tcp", net.JoinHostPort(url.Hostname(), url.Port()), time.Second)
 	if err != nil {
 		return err
@@ -39,9 +40,11 @@ func (tObj *TraceObject) Opentracer(jaegerURL string, service string, code int, 
 
 	ctx := context.Background()
 
+	// create trace provider
 	flush, err := tObj.initTracer(jaegerURL, service, tags, l, envs)
 	defer flush()
 
+	// start tracing and set errors
 	tr := otel.Tracer(service)
 	ctx, span := tr.Start(ctx, "request-span")
 	if code == 200 {
