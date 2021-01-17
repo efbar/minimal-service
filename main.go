@@ -86,10 +86,10 @@ func main() {
 	logger.Info("Got signal:", sig.String())
 
 	// if we are here and consul connect is active, deregister the service from it
-	if err := client.Agent().ServiceDeregister("minimal-service"); err != nil {
-		logger.Error(err.Error())
-	}
 	if envs["CONNECT"] == "1" {
+		if err := client.Agent().ServiceDeregister("minimal-service"); err != nil {
+			logger.Error(err.Error())
+		}
 		logger.Debug("Consul service deregistration")
 	}
 
