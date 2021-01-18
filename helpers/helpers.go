@@ -42,6 +42,7 @@ func ReadEnv() map[string]string {
 		"DEBUG",
 		"CONNECT",
 		"CONSUL_SERVER",
+		"CONSUL_HTTP_TOKEN",
 	}
 
 	pair := map[string]string{}
