@@ -31,6 +31,11 @@ func main() {
 	// fill envs
 	envs := helpers.ListEnvs
 
+	// some debug prints
+	for key, val := range envs {
+		logger.Debug(envs["DEBUG"], key+"="+val)
+	}
+
 	// set service port
 	port := envs["SERVICE_PORT"]
 
@@ -66,7 +71,6 @@ func main() {
 	// run the http server
 	go func() {
 		logger.Info("Starting server on port " + port)
-
 		err := s.ListenAndServe()
 		if err != nil {
 			logger.Error("Error from server,", err.Error())
@@ -102,30 +106,21 @@ func main() {
 
 func connectToConsul(s *http.Server, envs map[string]string, logger *logging.Logger) *consul.Client {
 
-	logger.Debug(envs["DEBUG"], "CONSUL_SERVER:", envs["CONSUL_SERVER"])
-
 	// fill some vars if we are in kube
 	kubeNode := os.Getenv("HOST_IP")
 	kubePod := os.Getenv("POD_NAME")
 	var host string
 	if len(kubeNode) != 0 {
-		envs["CONSUL_SERVER"] = kubeNode + ":8500"
+		envs["CONSUL_AGENT"] = kubeNode + ":8500"
 		host = kubePod
 	} else {
 		host, _ = helpers.GetHostname()
 	}
 
-	// set client configs
-	conf := &consul.Config{
-		Address:  envs["CONSUL_SERVER"],
-		WaitTime: 0,
-	}
-
 	// create client and service
-	client, _ := consul.NewClient(conf)
+	client, _ := consul.NewClient(consul.DefaultConfig())
 	svc, _ := connect.NewService("minimal-service", client)
 	defer svc.Close()
-	s.TLSConfig = svc.ServerTLSConfig()
 
 	// set service details: serviceID, port, tags, address, meta tags
 	serviceID := "minimal-service"
