@@ -42,7 +42,13 @@ func ReadEnv() map[string]string {
 		"DEBUG",
 		"CONNECT",
 		"CONSUL_SERVER",
+		"CONSUL_AGENT",
 		"CONSUL_HTTP_TOKEN",
+		"CONSUL_CACERT",
+		"HOST_IP",
+		"POD_IP",
+		"POD_NAME",
+		"POD_NAMESPACE",
 	}
 
 	pair := map[string]string{}
@@ -75,8 +81,8 @@ func ReadEnv() map[string]string {
 	if len(pair["DEBUG"]) == 0 {
 		pair["DEBUG"] = "0"
 	}
-	if len(pair["CONSUL_SERVER"]) == 0 {
-		pair["CONSUL_SERVER"] = "http://127.0.0.1:8500"
+	if len(pair["CONSUL_AGENT"]) == 0 {
+		pair["CONSUL_AGENT"] = "http://127.0.0.1:8500"
 	}
 	if len(pair["CONNECT"]) == 0 {
 		pair["CONNECT"] = "0"
