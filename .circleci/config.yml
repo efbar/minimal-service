@@ -40,7 +40,7 @@ jobs:
       
       - run:
           name: Start service
-          command: $(TEST_RESULTS)/bin/minimal-service
+          command: $TEST_RESULTS/bin/minimal-service
       
       - run:
           name: Check health
