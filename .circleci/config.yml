@@ -41,6 +41,7 @@ jobs:
       - run:
           name: Start service
           command: $TEST_RESULTS/bin/minimal-service
+          background: true
       
       - run:
           name: Check health
