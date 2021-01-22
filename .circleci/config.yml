@@ -23,14 +23,14 @@ jobs:
           command: go test -v ./handlers/
       - run: 
           name: Build
-          command: go build -o $(GOPATH)/bin/$(PROJECT_NAME) $(GOFILES)
+          command: go build -o $(TEST_RESULTS)/bin/$(PROJECT_NAME) $(GOFILES)
       - save_cache:
           key: go-mod-v4-{{ checksum "go.sum" }}
           paths:
             - "/go/pkg/mod"
       - run:
           name: Start service
-          command: ./minimal-service
+          command: $(TEST_RESULTS)/bin/minimal-service
       - run:
           name: Check health
           command: curl -s http://localhost:9090/health
