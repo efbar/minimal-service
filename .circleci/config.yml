@@ -53,8 +53,21 @@ jobs:
 
       - store_test_results:
           path: /tmp/test-results
+
+      - setup_remote_docker:
+          version: 19.03.13
+          docker_layer_caching: true
+
+      - run: |
+          docker build -t efbar/minimal-service:$VERSION .
+          echo $DOCKER_PASS | docker login -u $DOCKER_USER $DOCKER_PASSWORD
+          docker push efbar/minimal-service:$VERSION
 workflows:
   version: 2
   build-workflow:
     jobs:
-      - build
+      - build:
+          filters:
+              branches:
+                only:
+                  - main
