@@ -1,6 +1,8 @@
 Minimal Service
 =======
 
+[![CircleCI](https://circleci.com/gh/efbar/minimal-service/tree/main.svg?style=shield)](https://circleci.com/gh/efbar/minimal-service/tree/main)
+
 ## Aim of the project
 
 The purpose is to create a simple HTTP service to be used in microservices environments.
@@ -45,7 +47,7 @@ This service can be started setting various environment variables, here the list
 |`SERVICE_PORT` | `9090`||
 |`DELAY_MAX`|`0`|
 |`TRACING`|`0`| `0` or `1`| 
-|`JAEGER_URL`| `http://localhost:14268/api/traces`||
+|`JAEGER_URL`| `http://localhost:14268/api/traces`|`URI in form scheme://host:port/api/traces`|
 |`DISCARD_QUOTA`|`0`|from `0` to `100`|
 |`REJECT`|`0`| `0` or `1`| 
 |`DEBUG`|`0`| `0` or `1`| 
