@@ -59,7 +59,7 @@ jobs:
 
       - run: |
           docker build -t efbar/minimal-service:$VERSION .
-          echo $DOCKER_PASS | docker login -u $DOCKER_USER $DOCKER_PASSWORD
+          echo $DOCKER_PASSWORD | docker login -u $DOCKER_USER --password-stdin
           docker push efbar/minimal-service:$VERSION
 workflows:
   version: 2
