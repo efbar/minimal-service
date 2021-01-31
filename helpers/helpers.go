@@ -18,6 +18,7 @@ var EnableDebug bool
 
 func init() {
 	ListEnvs = ReadEnv()
+	rand.Seed(time.Now().UnixNano())
 }
 
 // GetHostname ... simply get hostname
@@ -107,7 +108,6 @@ func RandBool(i int, l *logging.Logger) bool {
 		i = 0
 	}
 	quota := float32(i) / float32(100)
-	rand.Seed(time.Now().UnixNano())
-	l.Debug(ListEnvs["DEBUG"], "Quota to discard:", fmt.Sprint(quota))
+
 	return rand.Float32() < quota
 }
