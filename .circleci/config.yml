@@ -9,7 +9,7 @@ jobs:
     environment: 
       TEST_RESULTS: /tmp/test-results
       PROJECT_NAME: minimal-service
-      VERSION: 1.0.0
+      VERSION: 1.0.1
     
     steps:
       - checkout
