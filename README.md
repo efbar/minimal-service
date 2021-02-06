@@ -43,6 +43,7 @@ The service has some features and you can set them with environment variables.
 - It will enable tracing to a Jaeger endpoint through the use of OpenTelemetry dependency. It traces status codes and headers.
 - Discard request entirely without any feedback or reject them with 500 http status response.
 - Consul Connect integration, setting some env variables, you can register this service to a Consul catalog.
+- HTTPS with self-signed certs available.
 
 This service can be started setting various environment variables, here the list:
 
@@ -57,6 +58,7 @@ This service can be started setting various environment variables, here the list
 |`DEBUG`|`0`| `0` or `1`| 
 |`CONNECT`|`0`| `0` or `1`| 
 |`CONSUL_SERVER`|`http://127.0.0.1:8500`| `URI in form scheme://host:port` | 
+|`HTTPS`|`false`| `false` or `true`| 
 
 ### Health Status API
 
