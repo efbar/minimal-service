@@ -34,6 +34,7 @@ func GetHostname() (string, error) {
 // ReadEnv ... collect important envs and set some defaults if needed
 func ReadEnv() map[string]string {
 	valuableEnv := []string{
+		"HTTPS",
 		"SERVICE_PORT",
 		"DELAY_MAX",
 		"TRACING",
@@ -61,6 +62,9 @@ func ReadEnv() map[string]string {
 	}
 
 	// set some defaults if env not present
+	if len(pair["HTTPS"]) == 0 {
+		pair["HTTPS"] = "false"
+	}
 	if len(pair["SERVICE_PORT"]) == 0 {
 		pair["SERVICE_PORT"] = "9090"
 	}
