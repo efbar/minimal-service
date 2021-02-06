@@ -71,7 +71,12 @@ func main() {
 	// run the http server
 	go func() {
 		logger.Info("Starting server on port " + port)
-		err := s.ListenAndServe()
+		var err error
+		if envs["HTTPS"] == "true" {
+			err = s.ListenAndServeTLS("certs/minimalservice.crt", "certs/minimalservice.key")
+		} else {
+			err = s.ListenAndServe()
+		}
 		if err != nil {
 			logger.Error("Error from server,", err.Error())
 			os.Exit(1)
@@ -153,6 +158,16 @@ func connectToConsul(s *http.Server, envs map[string]string, logger *logging.Log
 		}
 	}
 
+	var endpoint string
+	var tlsSkip bool
+	if envs["HTTPS"] == "true" {
+		endpoint = "https://" + ipAddr + ":" + envs["SERVICE_PORT"] + "/health"
+		tlsSkip = true
+	} else {
+		endpoint = "https://" + ipAddr + ":" + envs["SERVICE_PORT"] + "/health"
+		tlsSkip = false
+	}
+
 	// fill service registration, set native connect, set service check
 	service := &consul.AgentServiceRegistration{
 		ID:      host + "-" + serviceID,
@@ -165,10 +180,11 @@ func connectToConsul(s *http.Server, envs map[string]string, logger *logging.Log
 			Native: true,
 		},
 		Check: &consul.AgentServiceCheck{
-			HTTP:                           "http://" + ipAddr + ":" + envs["SERVICE_PORT"] + "/health",
+			HTTP:                           endpoint,
 			Interval:                       "5s",
 			Timeout:                        "1s",
 			DeregisterCriticalServiceAfter: "1m",
+			TLSSkipVerify:                  tlsSkip,
 		},
 	}
 
