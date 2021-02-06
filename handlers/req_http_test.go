@@ -23,6 +23,7 @@ func setupReqHTTPTest(t *testing.T) *Data {
 	logger := &logging.Logger{
 		Logger: l,
 	}
+
 	return &Data{
 		*logger,
 		helpers.ListEnvs,
@@ -181,10 +182,21 @@ func TestReqHTTPResp(t *testing.T) {
 			status:   http.StatusBadGateway,
 			response: "Bad Gateway\n",
 		},
+		{
+			name:   "GET request on HTTPS server",
+			method: "GET",
+			path:   "/",
+			body:   "",
+			status: http.StatusOK,
+			envs: map[string]string{
+				"HTTPS": "true",
+			},
+		},
 	}
 
 	for _, tr := range tt {
 		handler := setupReqHTTPTest(t)
+
 		if len(tr.envs) == 0 {
 			handler.envs = map[string]string{
 				"DELAY_MAX": "0",
@@ -193,6 +205,7 @@ func TestReqHTTPResp(t *testing.T) {
 		} else {
 			handler.envs = tr.envs
 		}
+
 		t.Run(tr.name, func(t *testing.T) {
 			req := httptest.NewRequest(tr.method, tr.path, strings.NewReader(tr.body))
 			if tr.contentType == "text/plain" {
