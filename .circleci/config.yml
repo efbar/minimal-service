@@ -4,7 +4,7 @@ jobs:
     docker:
       - image: cimg/go:1.17.2
 
-    working_directory: /go/src/github.com/{{ORG_NAME}}/{{REPO_NAME}}
+    working_directory: /home/circleci/go/src/github.com/{{ORG_NAME}}/{{REPO_NAME}}
 
     environment:
       TEST_RESULTS: /tmp/test-results
