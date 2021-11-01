@@ -2,52 +2,52 @@ version: 2
 jobs:
   build:
     docker:
-      - image: circleci/golang:1.15.6
+      - image: cimg/go:1.17.2
 
     working_directory: /go/src/github.com/{{ORG_NAME}}/{{REPO_NAME}}
 
-    environment: 
+    environment:
       TEST_RESULTS: /tmp/test-results
       PROJECT_NAME: minimal-service
       VERSION: 1.0.1
-    
+
     steps:
       - checkout
-      - run: 
-          name: Create dir 
+      - run:
+          name: Create dir
           command: mkdir -p $TEST_RESULTS
 
       - restore_cache:
           keys:
             - go-mod-v4-{{ checksum "go.sum" }}
-      
+
       - run:
           name: Run go get
           command: go get -v -t -d ./...
-      
+
       - run:
           name: Run go test
           command: go test -v -race ./handlers/
-      
-      - run: 
+
+      - run:
           name: Build
           command: go build -o $TEST_RESULTS/bin/$PROJECT_NAME
-      
+
       - save_cache:
           key: go-mod-v4-{{ checksum "go.sum" }}
           paths:
             - "/go/pkg/mod"
-      
+
       - run:
           name: Start service
           command: $TEST_RESULTS/bin/minimal-service
           background: true
-      
+
       - run:
           name: Check health
           command: curl -s http://localhost:9090/health
 
-      - store_artifacts: 
+      - store_artifacts:
           path: /tmp/test-results
           destination: raw-test-output
 
@@ -55,7 +55,7 @@ jobs:
           path: /tmp/test-results
 
       - setup_remote_docker:
-          version: 19.03.13
+          version: 20.10.9
 
       - run: |
           docker build -t efbar/minimal-service:$VERSION .
@@ -67,6 +67,6 @@ workflows:
     jobs:
       - build:
           filters:
-              branches:
-                only:
-                  - main
+            branches:
+              only:
+                - main
