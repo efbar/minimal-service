@@ -47,18 +47,18 @@ The service has some features and you can set them with environment variables.
 
 This service can be started setting various environment variables, here the list:
 
-| Env variable | default |value range|
-| ------------------- |:-----:|----|
-|`SERVICE_PORT` | `9090`||
-|`DELAY_MAX`|`0`|
-|`TRACING`|`0`| `0` or `1`| 
-|`JAEGER_URL`| `http://localhost:14268/api/traces`|`URI in form scheme://host:port/api/traces`|
-|`DISCARD_QUOTA`|`0`|from `0` to `100`|
-|`REJECT`|`0`| `0` or `1`| 
-|`DEBUG`|`0`| `0` or `1`| 
-|`CONNECT`|`0`| `0` or `1`| 
-|`CONSUL_SERVER`|`http://127.0.0.1:8500`| `URI in form scheme://host:port` | 
-|`HTTPS`|`false`| `false` or `true`| 
+| Env variable    |               default               | value range                                 |
+| --------------- | :---------------------------------: | ------------------------------------------- |
+| `SERVICE_PORT`  |               `9090`                |                                             |
+| `DELAY_MAX`     |                 `0`                 |
+| `TRACING`       |                 `0`                 | `0` or `1`                                  |
+| `JAEGER_URL`    | `http://localhost:14268/api/traces` | `URI in form scheme://host:port/api/traces` |
+| `DISCARD_QUOTA` |                 `0`                 | from `0` to `100`                           |
+| `REJECT`        |                 `0`                 | `0` or `1`                                  |
+| `DEBUG`         |                 `0`                 | `0` or `1`                                  |
+| `CONNECT`       |                 `0`                 | `0` or `1`                                  |
+| `CONSUL_AGENT`  |       `http://127.0.0.1:8500`       | `URI in form scheme://host:port`            |
+| `HTTPS`         |               `false`               | `false` or `true`                           |
 
 ### Health Status API
 
