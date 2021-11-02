@@ -43,7 +43,6 @@ func ReadEnv() map[string]string {
 		"REJECT",
 		"DEBUG",
 		"CONNECT",
-		"CONSUL_SERVER",
 		"CONSUL_AGENT",
 		"CONSUL_HTTP_TOKEN",
 		"CONSUL_CACERT",

@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"runtime"
 	"strconv"
 	"syscall"
 	"time"
@@ -114,16 +115,34 @@ func connectToConsul(s *http.Server, envs map[string]string, logger *logging.Log
 	// fill some vars if we are in kube
 	kubeNode := os.Getenv("HOST_IP")
 	kubePod := os.Getenv("POD_NAME")
-	var host string
+	var consul_server string
 	if len(kubeNode) != 0 {
 		envs["CONSUL_AGENT"] = kubeNode + ":8500"
-		host = kubePod
+		consul_server = kubePod
+	} else if envs["CONSUL_AGENT"] != "" {
+		consul_server = envs["CONSUL_AGENT"]
 	} else {
-		host, _ = helpers.GetHostname()
+		consul_server, _ = helpers.GetHostname()
 	}
 
 	// create client and service
-	client, _ := consul.NewClient(consul.DefaultConfig())
+	client, _ := consul.NewClient(&consul.Config{
+		Address: consul_server,
+		Scheme:  "http",
+		Transport: &http.Transport{
+			Proxy: http.ProxyFromEnvironment,
+			DialContext: (&net.Dialer{
+				Timeout:   30 * time.Second,
+				KeepAlive: 30 * time.Second,
+				DualStack: true,
+			}).DialContext,
+			MaxIdleConns:          100,
+			IdleConnTimeout:       90 * time.Second,
+			TLSHandshakeTimeout:   10 * time.Second,
+			ExpectContinueTimeout: 1 * time.Second,
+			MaxIdleConnsPerHost:   runtime.GOMAXPROCS(0) + 1,
+		},
+	})
 	svc, _ := connect.NewService("minimal-service", client)
 	defer svc.Close()
 
@@ -153,24 +172,24 @@ func connectToConsul(s *http.Server, envs map[string]string, logger *logging.Log
 		}
 	} else {
 		meta = map[string]string{
-			"hostname": host,
+			"hostname": consul_server,
 			"version":  "v1",
 		}
 	}
 
-	var endpoint string
 	var tlsSkip bool
+	var endpoint string
 	if envs["HTTPS"] == "true" {
 		endpoint = "https://" + ipAddr + ":" + envs["SERVICE_PORT"] + "/health"
-		tlsSkip = true
-	} else {
-		endpoint = "https://" + ipAddr + ":" + envs["SERVICE_PORT"] + "/health"
 		tlsSkip = false
+	} else {
+		endpoint = "http://" + ipAddr + ":" + envs["SERVICE_PORT"] + "/health"
+		tlsSkip = true
 	}
 
 	// fill service registration, set native connect, set service check
 	service := &consul.AgentServiceRegistration{
-		ID:      host + "-" + serviceID,
+		ID:      "_" + serviceID,
 		Name:    serviceID,
 		Port:    port,
 		Address: ipAddr,
@@ -183,7 +202,7 @@ func connectToConsul(s *http.Server, envs map[string]string, logger *logging.Log
 			HTTP:                           endpoint,
 			Interval:                       "5s",
 			Timeout:                        "1s",
-			DeregisterCriticalServiceAfter: "1m",
+			DeregisterCriticalServiceAfter: "30s",
 			TLSSkipVerify:                  tlsSkip,
 		},
 	}
