@@ -44,6 +44,7 @@ func main() {
 	anyReq := handlers.HandlerAnyHTTP(*logger, envs)
 	bounceReq := handlers.HandlerBounceHTTP(*logger, envs)
 	healthReq := handlers.HandlerHealth(*logger, envs)
+	crashReq := handlers.HandlerCrash(*logger, envs)
 
 	// create server mux
 	sm := http.NewServeMux()
@@ -52,6 +53,7 @@ func main() {
 	sm.Handle("/", anyReq)
 	sm.Handle("/bounce", bounceReq)
 	sm.Handle("/health", healthReq)
+	sm.Handle("/crash", crashReq)
 
 	// fill the new server config
 	s := http.Server{
