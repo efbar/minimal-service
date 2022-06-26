@@ -28,14 +28,11 @@ func setupHealthTest(t *testing.T) *Health {
 func TestHealthResp(t *testing.T) {
 
 	tt := []struct {
-		name        string
-		method      string
-		contentType string
-		path        string
-		body        string
-		response    string
-		status      int
-		err         error
+		name     string
+		method   string
+		path     string
+		response string
+		status   int
 	}{
 		{
 			name:     "GET request",

@@ -34,6 +34,10 @@ The body will contain the endpoint's response HTTP status (`OK 200`).
 
 In case of not `200` codes from the endpoint, the headers will be not modified and the body will contain `500 Internal Server Error`.
 
+#### Crash endpoint
+
+A `GET` request at path `/crash` is accepted too and it will let the app exit with `137` error.
+
 ### Features
 
 The service has some features and you can set them with environment variables.
