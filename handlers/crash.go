@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"fmt"
 	"net/http"
 	"os"
 
@@ -27,7 +26,6 @@ func (h *Crash) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 	h.log.Debug(h.envs["DEBUG"], r.Method, "on", r.URL.String(), "from", r.RemoteAddr)
 
 	if r.Method == http.MethodGet {
-		fmt.Fprint(rw, "Crashing")
 		h.log.Debug(h.envs["DEBUG"], "Crashing")
 		os.Exit(137)
 	} else {
