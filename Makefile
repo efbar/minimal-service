@@ -4,7 +4,7 @@ ifneq (,$(wildcard ./.env))
 endif
 
 PROJECT_NAME=minimal-service
-VERSION=1.0.1
+VERSION=1.0.2
 GOFILES=$(wildcard *./.go)
 
 ## build
@@ -41,7 +41,7 @@ build-windows: test
 	@-CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -o $(GOPATH)/bin/$(PROJECT_NAME) $(GOFILES)
 
 ## build-docker
-docker-build:
+build-docker:
 	@-docker build . -t $(PROJECT_NAME):v$(VERSION)
 
 .PHONY: help test clean
