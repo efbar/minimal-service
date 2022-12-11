@@ -68,7 +68,7 @@ func main() {
 	// if consul connect enabled, connect to it
 	var client *consul.Client
 	if envs["CONNECT"] == "1" {
-		client = connectToConsul(&s, envs, logger)
+		client = connectToConsul(envs, logger)
 	}
 
 	// run the http server
@@ -88,11 +88,8 @@ func main() {
 
 	// get terminal and syscall signals
 	c := make(chan os.Signal, 1)
-	signal.Notify(c, syscall.SIGKILL)
 	signal.Notify(c, syscall.SIGTERM)
 	signal.Notify(c, os.Interrupt)
-	signal.Notify(c, os.Kill)
-	signal.Notify(c, os.Kill)
 
 	sig := <-c
 	logger.Info("Got signal:", sig.String())
@@ -112,7 +109,7 @@ func main() {
 	s.Shutdown(ctx)
 }
 
-func connectToConsul(s *http.Server, envs map[string]string, logger *logging.Logger) *consul.Client {
+func connectToConsul(envs map[string]string, logger *logging.Logger) *consul.Client {
 
 	// fill some vars if we are in kube
 	kubeNode := os.Getenv("HOST_IP")
@@ -166,19 +163,17 @@ func connectToConsul(s *http.Server, envs map[string]string, logger *logging.Log
 		}
 	}
 
-	meta := map[string]string{}
-	if len(kubeNode) != 0 {
+    meta := map[string]string{
+			"hostname": consul_server,
+			"version":  "v1",
+		}
+    if len(kubeNode) != 0 {
 		meta = map[string]string{
 			"pod-name": os.Getenv("POD_NAME"),
 			"version":  "v1",
 		}
-	} else {
-		meta = map[string]string{
-			"hostname": consul_server,
-			"version":  "v1",
-		}
 	}
-
+    
 	var tlsSkip bool
 	var endpoint string
 	if envs["HTTPS"] == "true" {
