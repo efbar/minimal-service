@@ -1,4 +1,4 @@
-FROM golang:1.17-alpine3.15 AS build_base
+FROM golang:1.19-alpine3.16 AS build_base
 
 RUN apk add --no-cache git
 WORKDIR /tmp/minimal-service
@@ -14,7 +14,7 @@ RUN CGO_ENABLED=0 go test ./handlers/
 
 RUN go build -o ./out/minimal-service .
 
-FROM alpine:3.15
+FROM alpine:3.16
 
 RUN apk add curl
 
